@@ -160,6 +160,7 @@ final class Abilities {
                 }
                 if (br != null) { w.spawnParticle(Particle.POOF, next, 10, .2, .2, .2, .05); d.remove(); cancel(); return; }
                 d.teleport(next);
+                Fx.trail(next, mat);
                 travelled += speed;
                 if (travelled >= range) { d.remove(); cancel(); }
             }
@@ -193,7 +194,7 @@ final class Abilities {
             case HEPHAESTUS -> n == 1 ? shatter(p) : piercing(p);
             case BOREUS -> n == 1 ? breezyDash(p) : overdrive(p);
         };
-        if (ok) d.startCd(n, v(p, n, "cooldown", 30));
+        if (ok) { d.startCd(n, v(p, n, "cooldown", 30)); Fx.cast(p, t, n); }
     }
 
     // ================================================================ SHACKLED
@@ -201,7 +202,7 @@ final class Abilities {
         LivingEntity t = target(p, v(p, 1, "range", 30));
         if (t == null) { msg(p, "No target in sight."); return false; }
         Status.set(Status.enchain, t, secs(p, v(p, 1, "seconds", 10)));
-        t.getWorld().spawnParticle(Particle.CRIT, t.getLocation().add(0, 1, 0), 40, .4, .6, .4, .1);
+        Fx.onTarget(t, "chain");
         snd(t, "block.chain.place");
         return true;
     }
@@ -212,7 +213,8 @@ final class Abilities {
         RayTraceResult r = p.getWorld().rayTrace(eye, eye.getDirection(), range, FluidCollisionMode.NEVER, true, 0.5, en -> validTarget(p, en));
         if (r == null) { msg(p, "The chain missed."); return true; }
         Location hl = r.getHitPosition().toLocation(p.getWorld());
-        line(eye.clone().subtract(0, 0.3, 0), hl, Particle.CRIT);
+        Fx.beam(eye.clone().subtract(0, 0.3, 0), hl, Particle.CRIT, 0x9E9E9E);
+        Fx.part(hl, Particle.ENCHANTED_HIT, 40, .4, .4, .4, .3);
         if (r.getHitEntity() instanceof LivingEntity t) {
             hurt(t, v(p, 2, "damage", 4), p);
             pull(t, p.getLocation(), 3.0);
@@ -239,7 +241,8 @@ final class Abilities {
         if (t instanceof Player tp) Status.healthAdd(tp, "tmp_moander_loss", -v(p, 2, "steal-hp", 4), ticks);
         Status.healthTo(p, "tmp_moander_gain", v(p, 2, "my-hearts", 12), ticks);
         give(p, t, list(p, 2, "effects"), true);
-        line(p.getEyeLocation().subtract(0, 0.3, 0), t.getEyeLocation(), Particle.SOUL);
+        Fx.beam(p.getEyeLocation().subtract(0, 0.3, 0), t.getEyeLocation(), Particle.SOUL_FIRE_FLAME, 0x101010);
+        Fx.onTarget(t, "wither");
         return true;
     }
 
@@ -265,7 +268,7 @@ final class Abilities {
                 locked.put(e, e.getLocation());
             }
         }
-        p.getWorld().spawnParticle(Particle.END_ROD, p.getLocation().add(0, 1, 0), 120, r / 3, 1, r / 3, .02);
+        Fx.timeStop(p, r, dur);
         snd(p, "block.beacon.deactivate");
         new BukkitRunnable() {
             int t = 0;
@@ -322,6 +325,7 @@ final class Abilities {
                 p.addPotionEffect(new PotionEffect(e.getType(), dur, e.getAmplifier()));
             }
             snd(t, "entity.generic.drink");
+            Fx.onTarget(t, "blood");
         });
         return true;
     }
@@ -332,7 +336,8 @@ final class Abilities {
         int ticks = ticks(p, v(p, 2, "seconds", 30));
         if (t instanceof Player tp) Status.healthAdd(tp, "tmp_icor_loss", -v(p, 2, "steal-hp", 4), ticks);
         Status.healthTo(p, "tmp_icor_gain", v(p, 2, "my-hearts", 15), ticks);
-        line(t.getEyeLocation(), p.getEyeLocation(), Particle.CRIT);
+        Fx.beam(t.getEyeLocation(), p.getEyeLocation(), Particle.DAMAGE_INDICATOR, 0xB00020);
+        Fx.onTarget(t, "lifesteal");
         return true;
     }
 
@@ -357,7 +362,7 @@ final class Abilities {
             Bukkit.getScheduler().runTaskLater(pl(), () -> {
                 if (!p.isOnline() || p.isDead() || Status.on(Status.stun, p)) return;
                 p.swingMainHand();
-                p.getWorld().spawnParticle(Particle.SWEEP_ATTACK, p.getLocation().add(0, 1, 0), 3, 1, .2, 1, 0);
+                Fx.spin(p, r);
                 for (Entity e : p.getNearbyEntities(r, r, r))
                     if (validTarget(p, e)) hurt((LivingEntity) e, dmg, p);
             }, i * gap);
@@ -370,7 +375,7 @@ final class Abilities {
         fire(p, Material.DIRT, false, v(p, 1, "range", 30), 1.5, 1.0, t -> {
             hurt(t, v(p, 1, "damage", 6), p);
             Status.stun(t, v(p, 1, "stun-seconds", 1));
-            t.getWorld().spawnParticle(Particle.BLOCK, t.getLocation().add(0, 1, 0), 40, .4, .6, .4, 0, Material.DIRT.createBlockData());
+            Fx.onTarget(t, "quake");
         });
         return true;
     }
@@ -480,8 +485,9 @@ final class Abilities {
         back.normalize().multiply(-v(p, 2, "behind-distance", 1.5));
         Location dest = tl.clone().add(back);
         dest.setDirection(tl.toVector().subtract(dest.toVector()));
-        p.getWorld().spawnParticle(Particle.PORTAL, p.getLocation().add(0, 1, 0), 40, .3, .6, .3, .5);
+        final Location slashFrom = p.getLocation().add(0, 1, 0);
         p.teleport(dest);
+        Fx.slash(slashFrom, dest.clone().add(0, 1, 0), t);
         Status.set(Status.swift, p, v(p, 2, "window-seconds", 10));
         snd(p, "entity.enderman.teleport");
         return true;
@@ -515,6 +521,7 @@ final class Abilities {
         wb.setDamageBuffer(1000);
         p.setWorldBorder(wb);
         o.setWorldBorder(wb);
+        Fx.duelStart(c, r);
         p.sendMessage(Component.text("Forced Duel started. Press the ability again to end it.", NamedTextColor.GOLD));
         o.sendMessage(Component.text("You were pulled into a Forced Duel with " + p.getName() + "!", NamedTextColor.RED));
 
@@ -545,7 +552,7 @@ final class Abilities {
 
     static boolean impervious(Player p) {
         Status.set(Status.immortal, p, secs(p, v(p, 2, "seconds", 5)));
-        p.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation().add(0, 1, 0), 60, .5, 1, .5, .3);
+        Fx.shield(p, ticks(p, v(p, 2, "seconds", 5)));
         snd(p, "item.totem.use");
         return true;
     }
@@ -559,9 +566,10 @@ final class Abilities {
             hurt(q, v(p, 1, "damage", 4), p);
             pull(q, p.getLocation(), v(p, 1, "pull", 2.5));
             line(q.getLocation().add(0, 1, 0), p.getLocation().add(0, 1, 0), Particle.BUBBLE);
+            Fx.onTarget(q, "tidal");
             any = true;
         }
-        p.getWorld().spawnParticle(Particle.SPLASH, p.getLocation().add(0, 1, 0), 80, r / 3, 1, r / 3, .1);
+        Fx.tidalWave(p, r);
         if (!any) msg(p, "Nobody in range.");
         return any;
     }
@@ -577,7 +585,7 @@ final class Abilities {
                 if (!t.isValid() || t.isDead() || i >= secs) { cancel(); return; }
                 t.setRemainingAir(0);
                 hurtRaw(t, dmg);
-                t.getWorld().spawnParticle(Particle.BUBBLE, t.getEyeLocation(), 20, .3, .3, .3, .05);
+                Fx.onTarget(t, "suffocate");
                 i++;
             }
         }.runTaskTimer(pl(), 0, 20);
@@ -599,6 +607,7 @@ final class Abilities {
         Set<Long> mine = new HashSet<>();
         p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, dur + 200, 0));
         snd(p, "block.lava.pop");
+        Fx.magmaDome(c, R, dur + 60);
 
         Runnable restore = () -> {
             new BukkitRunnable() {
@@ -654,7 +663,7 @@ final class Abilities {
                     if (!p.isOnline() || p.isDead()) { cancelCharge(p, false); return; }
                     double pr = chargeProgress(p, c);
                     c.bar.setProgress(Math.max(0, Math.min(1, pr)));
-                    p.getWorld().spawnParticle(Particle.FLAME, p.getLocation().add(0, 2.6, 0), 1 + (int) (pr * 8), .15 + pr * .25, .15 + pr * .25, .15 + pr * .25, .01);
+                    Fx.chargeFx(p, pr);
                     double el = (System.currentTimeMillis() - c.start) / 1000.0;
                     if (pr <= 0 && el > v(p, 2, "max-seconds", 60)) cancelCharge(p, true);
                 }
@@ -668,7 +677,7 @@ final class Abilities {
         fire(p, Material.MAGMA_BLOCK, false, v(p, 2, "range", 60), 1.2, 1.2, t -> {
             hurt(t, dmg, p);
             t.setFireTicks(100);
-            t.getWorld().spawnParticle(Particle.EXPLOSION, t.getLocation().add(0, 1, 0), 3, .3, .3, .3, 0);
+            Fx.onTarget(t, "fire");
             snd(t, "entity.generic.explode");
         });
         snd(p, "entity.blaze.shoot");
@@ -698,9 +707,10 @@ final class Abilities {
             if (!(e instanceof Player q) || !validTarget(p, q)) continue;
             hurt(q, v(p, 1, "damage", 4), p);
             Gear.armorDelta(q, drain);
+            Fx.onTarget(q, "shatter");
             any = true;
         }
-        p.getWorld().spawnParticle(Particle.EXPLOSION, p.getLocation().add(0, 1, 0), 6, r / 4, .5, r / 4, 0);
+        Fx.shockwave(p, r);
         snd(p, "entity.iron_golem.damage");
         if (!any) msg(p, "Nobody in range.");
         return any;
@@ -711,6 +721,7 @@ final class Abilities {
         fire(p, m == null ? Material.IRON_AXE : m, true, v(p, 2, "range", 30), 1.6, 1.0, t -> {
             hurt(t, v(p, 2, "damage", 2), p);
             Status.stun(t, v(p, 2, "stun-seconds", 2));
+            Fx.onTarget(t, "axe");
             snd(t, "item.trident.hit");
         });
         return true;
@@ -736,7 +747,7 @@ final class Abilities {
                 }
                 p.setVelocity(dir.clone().multiply(speed));
                 p.setFallDistance(0);
-                p.getWorld().spawnParticle(Particle.CLOUD, p.getLocation().add(0, 1, 0), 6, .3, .4, .3, .02);
+                Fx.dashTrail(p);
                 travelled += speed;
             }
         }.runTaskTimer(pl(), 0, 1);

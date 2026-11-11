@@ -39,6 +39,7 @@ final class Status {
 
     /** Stunned players can only gap / pot (see UtilityListener). Mobs just get slowed. */
     static void stun(LivingEntity e, double seconds) {
+        Fx.stars(e, seconds);
         if (e instanceof Player p) {
             set(stun, p, seconds);
             p.setVelocity(new Vector(0, 0, 0));

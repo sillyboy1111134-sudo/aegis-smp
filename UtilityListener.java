@@ -25,13 +25,15 @@ import org.bukkit.event.world.GenericGameEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import java.util.*;
 
 public final class UtilityListener implements Listener {
     private final Aegis pl = Aegis.I;
+    private boolean boosting = false;
 
     private boolean stunAllowed(Material m) { return pl.getConfig().getStringList("stun.allowed-items").contains(m.name()); }
     private boolean frozen(Player p) { return Status.on(Status.freeze, p); }
@@ -104,8 +106,7 @@ public final class UtilityListener implements Listener {
     public void onInteract(PlayerInteractEvent e) {
         Player p = e.getPlayer();
         ItemStack it = e.getItem();
-        if (frozen(p)) { e.setCancelled(true); return; }
-        if (stunned(p)) {
+        if (frozen(p) || stunned(p)) {
             boolean ok = it != null && stunAllowed(it.getType());
             e.setUseInteractedBlock(Event.Result.DENY);
             e.setUseItemInHand(ok ? Event.Result.ALLOW : Event.Result.DENY);
@@ -154,6 +155,7 @@ public final class UtilityListener implements Listener {
             Passives.refresh(p);
             p.sendMessage(net.kyori.adventure.text.Component.text("Energy: " + d.energy + "/" + pl.maxEnergy(), net.kyori.adventure.text.format.NamedTextColor.AQUA));
             p.playSound(p.getLocation(), "entity.experience_orb.pickup", 1f, 1.2f);
+            Fx.energy(p);
         } else {
             Roll.start(p, pl.randomClass(d.type));
         }
@@ -170,7 +172,7 @@ public final class UtilityListener implements Listener {
     public void onConsume(PlayerItemConsumeEvent e) {
         Player p = e.getPlayer();
         Material m = e.getItem().getType();
-        if (frozen(p) || (stunned(p) && !stunAllowed(m))) { e.setCancelled(true); return; }
+        if ((frozen(p) || stunned(p)) && !stunAllowed(m)) { e.setCancelled(true); return; }
         for (String id : Passives.unlocked(p)) {
             ConfigurationSection n = Passives.node(p, id);
             if (n == null || !n.getStringList("foods").contains(m.name())) continue;
@@ -282,10 +284,32 @@ public final class UtilityListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDropBlock(BlockDropItemEvent e) {
         Player p = e.getPlayer();
+        Material src = e.getBlockState().getType();
+        ItemStack tool = p.getInventory().getItemInMainHand();
+
+        // Hephaestus: autosmelt + double ancient debris
+        ConfigurationSection sm = Passives.first(p, "autosmelt");
+        if (sm != null) {
+            boolean oresOnly = sm.getBoolean("autosmelt-ores-only", true);
+            boolean silk = tool.getEnchantmentLevel(Enchantment.SILK_TOUCH) > 0;
+            boolean oreSource = src.name().endsWith("_ORE") || src == Material.ANCIENT_DEBRIS;
+            int debris = Math.max(1, sm.getInt("debris-multiplier", 2));
+            for (Item i : e.getItems()) {
+                ItemStack s = i.getItemStack();
+                if (!silk && (!oresOnly || oreSource)) {
+                    Material r = Smelting.result(s.getType());
+                    if (r != null) s = s.withType(r);
+                }
+                if (src == Material.ANCIENT_DEBRIS) s.setAmount(Math.min(s.getMaxStackSize(), s.getAmount() * debris));
+                i.setItemStack(s);
+            }
+        }
+
+        // Dolus: fortune doubles ore drops
         ConfigurationSection n = Passives.first(p, "fortune-multiplier");
         if (n == null) return;
-        if (p.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.FORTUNE) <= 0) return;
-        if (!e.getBlockState().getType().name().endsWith("_ORE")) return;
+        if (tool.getEnchantmentLevel(Enchantment.FORTUNE) <= 0) return;
+        if (!src.name().endsWith("_ORE")) return;
         int mul = Math.max(1, n.getInt("fortune-multiplier", 2));
         for (Item i : e.getItems()) {
             ItemStack s = i.getItemStack();
@@ -314,7 +338,7 @@ public final class UtilityListener implements Listener {
     public void onLaunch(ProjectileLaunchEvent e) {
         if (!(e.getEntity().getShooter() instanceof Player p)) return;
         Projectile pr = e.getEntity();
-        if (frozen(p) || (stunned(p) && !(pr instanceof ThrownPotion))) { e.setCancelled(true); return; }
+        if ((frozen(p) || stunned(p)) && !(pr instanceof ThrownPotion)) { e.setCancelled(true); return; }
         if (pr.getType() != EntityType.WIND_CHARGE) return;
         if (Status.on(Status.enchain, p)) { e.setCancelled(true); return; }
 
@@ -357,6 +381,18 @@ public final class UtilityListener implements Listener {
             ConfigurationSection n = Passives.node(p, id);
             if (n != null && n.getStringList("immune-effects").contains(key)) { e.setCancelled(true); return; }
         }
+        // Chrono: timed buffs last longer
+        ConfigurationSection b = Passives.first(p, "buff-duration-multiplier");
+        if (b == null || boosting) return;
+        PotionEffect ne = e.getNewEffect();
+        if (e.getAction() != EntityPotionEffectEvent.Action.ADDED && e.getAction() != EntityPotionEffectEvent.Action.CHANGED) return;
+        if (ne.getType().getEffectCategory() != PotionEffectType.Category.BENEFICIAL || ne.isInfinite() || ne.getDuration() <= 0) return;
+        e.setCancelled(true);
+        boosting = true;
+        try {
+            p.addPotionEffect(new PotionEffect(ne.getType(), (int) Math.round(ne.getDuration() * b.getDouble("buff-duration-multiplier", 1.5)),
+                    ne.getAmplifier(), ne.isAmbient(), ne.hasParticles(), ne.hasIcon()));
+        } finally { boosting = false; }
     }
 
     @EventHandler(ignoreCancelled = true)

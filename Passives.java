@@ -113,6 +113,7 @@ final class Passives {
             }
             default -> { }
         }
+        Fx.proc(target, n);
     }
 
     // ------------------------------------------------------------ once-per-second work

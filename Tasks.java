@@ -45,6 +45,22 @@ final class Tasks {
             }
         }.runTaskTimer(pl, 1, 1);
 
+        // class aura
+        new BukkitRunnable() {
+            @Override public void run() { for (Player p : Bukkit.getOnlinePlayers()) Fx.ambient(p); }
+        }.runTaskTimer(pl, 10, 4);
+
+        // Forced Duel walls
+        new BukkitRunnable() {
+            @Override public void run() {
+                for (Abilities.Duel d : new java.util.ArrayList<>(Abilities.duels.values()))
+                    for (java.util.UUID u : new java.util.UUID[]{d.caster(), d.other()}) {
+                        Player q = Bukkit.getPlayer(u);
+                        if (q != null) Fx.arenaWalls(d, q);
+                    }
+            }
+        }.runTaskTimer(pl, 10, 10);
+
         // autosave
         new BukkitRunnable() {
             @Override public void run() { pl.saveData(); }

@@ -11,7 +11,7 @@ general:
   starting-energy: 2
   max-energy: 5
   duration-bonus-per-energy: 0.02   # +2% ability duration per energy
-  ignore-armor: true                # all damage ignores armor (resistance/enchants/absorption still work)
+  abilities-ignore-armor: true      # ONLY ability damage ignores armor (resistance/enchants/absorption still work)
   strong-hit-threshold: 0.9         # attack-cooldown needed for passives to proc (blocks weak-hit procs)
   assign-class-on-first-join: true  # first join plays the slot-machine roll
   default-command-mode: false       # false = F / Shift+F, true = /ability 1 /ability 2
@@ -29,6 +29,11 @@ stun:
 
 bleed:
   damage-per-second: 1.0   # half a heart per second
+
+particles:
+  enabled: true
+  intensity: 1.0     # 0.5 = half the particles, 2.0 = double (lower it if players lag)
+  ambient: true      # themed aura around every player, denser with more energy
 
 hud:
   mode: glyph              # glyph = needs the resource pack (icon with bar underneath); text = plain fallback
@@ -107,7 +112,7 @@ classes:
       eat: {eat-time-multiplier: 0.8}
       armor: {armor-damage-multiplier: 1.25}
       haste: {permanent-effects: ["haste:2"]}
-      repair: {repair-amount: 2, repair-every-seconds: 5}
+      buffs: {buff-duration-multiplier: 1.5}      # every timed buff you receive lasts 50% longer
       wither: {when: hit, chance: 10, action: effect, effect: wither, level: 2, seconds: 3}
       regen: {permanent-effects: ["regeneration:1"]}
 
@@ -215,14 +220,14 @@ classes:
       armor_less: {armor-durability-multiplier: 0.9}
       resist: {permanent-effects: ["resistance:1"]}
       armor_dmg: {armor-damage-multiplier: 1.25}
-      repair: {repair-amount: 2, repair-every-seconds: 5}
+      smelt: {autosmelt: true, autosmelt-ores-only: true, debris-multiplier: 2}   # ores-only false = smelt every drop
 
   # ---------------------------------------------------------------- BOREUS
   boreus:
     a1: {cooldown: 30, distance: 30, speed: 2.0}
-    a2: {cooldown: 180, seconds: 20, mace-cooldown-after: 120, windburst-level: 1, windburst-velocity: 1.3}
+    a2: {cooldown: 180, seconds: 20, mace-cooldown-after: 120, windburst-level: 1, windburst-velocity: 1.3, overdrive-min-fall: 1.5}   # during Overdrive: no cap, no cooldown, normal mace rules
     passives:
-      mace: {mace-min-fall: 5, mace-cooldown: 10, mace-max-damage: 8.0}     # 8 damage = 4 hearts max
+      mace: {mace-min-fall: 5, mace-cooldown: 10, mace-max-damage: 8.0, mace-density: 2}   # density II mace formula, capped at 8 damage (4 hearts)
       wind: {wind-charge-straight: true, wind-charge-multiplier: 1.5}
       refund: {wind-charge-refund: 50}
       sculk: {sculk-silent: true}

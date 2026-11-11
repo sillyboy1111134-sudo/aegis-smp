@@ -51,7 +51,7 @@ public final class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void finalizeDamage(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof LivingEntity v)) return;
-        if (pl.getConfig().getBoolean("general.ignore-armor", true) && e.isApplicable(DamageModifier.ARMOR)) {
+        if (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true) && e.isApplicable(DamageModifier.ARMOR)) {
             double base = e.getDamage(DamageModifier.BASE)
                     + (e.isApplicable(DamageModifier.HARD_HAT) ? e.getDamage(DamageModifier.HARD_HAT) : 0)
                     + (e.isApplicable(DamageModifier.BLOCKING) ? e.getDamage(DamageModifier.BLOCKING) : 0);
@@ -105,6 +105,7 @@ public final class CombatListener implements Listener {
                 if (n.contains("heal-on-hit")) {
                     double max = att.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
                     att.setHealth(Math.min(max, att.getHealth() + n.getDouble("heal-on-hit", 1.0)));
+                    Fx.heal(att);
                 }
                 if (n.contains("armor-damage-multiplier")) Gear.extraArmor(vic, n.getDouble("armor-damage-multiplier") - 1.0, dmg);
                 if (n.contains("action") && "hit".equals(n.getString("when", "hit")) && Passives.roll(n.getDouble("chance", 100))) {
@@ -118,27 +119,41 @@ public final class CombatListener implements Listener {
         shieldLogic(att, vic);
     }
 
-    /** Axe-as-mace: vanilla mace bonus per fallen block, capped, with its own cooldown. */
+    /** Axe-as-mace: density-II mace damage, capped (and on cooldown) - unless Overdrive makes it a normal mace. */
     private double maceSmash(Player att, LivingEntity vic, ConfigurationSection n, double dmg) {
         if (!att.getInventory().getItemInMainHand().getType().name().endsWith("_AXE")) return dmg;
         boolean overdrive = Status.on(Status.overdrive, att);
         PlayerData d = pl.pd(att);
         if (!overdrive && d.remKey("mace") > 0) return dmg;
         double fall = att.getFallDistance();
-        if (fall < n.getDouble("mace-min-fall", 5)) return dmg;
+        double minFall = overdrive ? pl.getConfig().getDouble("classes.boreus.a2.overdrive-min-fall", 1.5) : n.getDouble("mace-min-fall", 5);
+        if (fall < minFall) return dmg;
 
+        // vanilla smash bonus (4/block for 3 blocks, 2/block for the next 5, 1/block after) + Density (0.5 per level per block)
         double bonus = Math.min(fall, 3) * 4 + Math.max(0, Math.min(fall, 8) - 3) * 2 + Math.max(0, fall - 8);
-        double total = Math.min(n.getDouble("mace-max-damage", 8.0), dmg + bonus);
-        if (!overdrive) d.startKey("mace", n.getDouble("mace-cooldown", 10));
+        bonus += n.getDouble("mace-density", 2) * 0.5 * fall;
+        double total = dmg + bonus;
+        if (!overdrive) {
+            total = Math.min(n.getDouble("mace-max-damage", 8.0), total);   // 4 hearts
+            d.startKey("mace", n.getDouble("mace-cooldown", 10));
+        }
 
-        att.getWorld().spawnParticle(Particle.EXPLOSION, vic.getLocation().add(0, 1, 0), 2, .2, .2, .2, 0);
+        Fx.smash(vic.getLocation(), overdrive);
         att.getWorld().playSound(vic.getLocation(), "item.mace.smash_ground", 1f, 1f);
         att.setFallDistance(0);
-        if (overdrive) {   // Windburst: launch the attacker back up
+        if (overdrive) {
+            // Windburst: launch the attacker back up
             Vector up = att.getVelocity();
             up.setY(pl.getConfig().getDouble("classes.boreus.a2.windburst-velocity", 1.3));
             att.setVelocity(up);
-            att.getWorld().spawnParticle(Particle.GUST_EMITTER_SMALL, att.getLocation(), 1);
+            Fx.windburst(att);
+            // normal-mace area knockback
+            for (Entity en : vic.getNearbyEntities(3.5, 2, 3.5)) {
+                if (en.equals(att) || !(en instanceof LivingEntity) || en instanceof org.bukkit.entity.ArmorStand || Abilities.trusts(att, en)) continue;
+                Vector push = en.getLocation().toVector().subtract(vic.getLocation().toVector()).setY(0);
+                if (push.lengthSquared() < 1e-4) push = new Vector(1, 0, 0);
+                en.setVelocity(push.normalize().multiply(0.8).setY(0.4));
+            }
         }
         return total;
     }
@@ -161,7 +176,7 @@ public final class CombatListener implements Listener {
         combos.put(att.getUniqueId(), c);
         int start = n.getInt("combo-start", 3), every = Math.max(1, n.getInt("combo-every", 2));
         if (c.n > start && (c.n - start - 1) % every == 0 && !isCrit(att)) {
-            att.getWorld().spawnParticle(Particle.CRIT, vic.getLocation().add(0, 1, 0), 20, .3, .4, .3, .2);
+            Fx.comboCrit(vic);
             return n.getDouble("combo-multiplier", 1.5);
         }
         return 1.0;

@@ -45,6 +45,7 @@ final class Roll {
                 Component.text("\u2039 " + left.display + "  \u2022  " + right.display + " \u203A", NamedTextColor.DARK_GRAY),
                 times));
         p.playSound(p.getLocation(), "block.note_block.hat", 0.7f, 0.6f + 0.04f * i);
+        Fx.part(p.getLocation().add(0, 2.3, 0), org.bukkit.Particle.END_ROD, 4, .3, .2, .3, .02);
 
         Bukkit.getScheduler().runTaskLater(Aegis.I, () -> step(id, i + 1), DELAYS[i]);
     }
@@ -71,6 +72,7 @@ final class Roll {
                     Title.Times.times(Duration.ofMillis(150), Duration.ofSeconds(4), Duration.ofSeconds(1))));
             p.playSound(p.getLocation(), "entity.player.levelup", 1f, 1f);
             p.playSound(p.getLocation(), "ui.toast.challenge_complete", 1f, 1f);
+            Fx.reveal(p);
         }
     }
 }
