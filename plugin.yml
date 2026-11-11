@@ -1,0 +1,23 @@
+name: Aegis
+version: ${project.version}
+main: dev.aegis.Aegis
+api-version: '1.21'
+description: Aegis SMP - energy, classes, passives and abilities.
+commands:
+  ability:
+    description: Use abilities by command / toggle command mode
+    usage: /ability <1|2|mode>
+    aliases: [a]
+  trust:
+    description: Manage who your abilities and passives will not affect
+    usage: /trust <add|remove|list> [player]
+  myclass:
+    description: Show your class, energy and passives
+    usage: /myclass
+  aegis:
+    description: Admin command
+    usage: /aegis <give|setclass|setenergy|reload>
+    permission: aegis.admin
+permissions:
+  aegis.admin:
+    default: op
