@@ -1,0 +1,230 @@
+# ============================================================
+#  Aegis SMP - config.yml
+#  Effects are written  "effect_id:LEVEL:SECONDS"  (LEVEL is the roman-numeral level, 1 = I).
+#  Permanent effects are written "effect_id:LEVEL".
+#  Chances are percentages (10 = 10%).
+#  Passives are listed IN UNLOCK ORDER inside ClassType.java; with 6 passives the 1st unlocks
+#  at 0 energy and the last at 5 energy (5 passives: 0,1,3,4,5).
+# ============================================================
+
+general:
+  starting-energy: 2
+  max-energy: 5
+  duration-bonus-per-energy: 0.02   # +2% ability duration per energy
+  ignore-armor: true                # all damage ignores armor (resistance/enchants/absorption still work)
+  strong-hit-threshold: 0.9         # attack-cooldown needed for passives to proc (blocks weak-hit procs)
+  assign-class-on-first-join: true  # first join plays the slot-machine roll
+  default-command-mode: false       # false = F / Shift+F, true = /ability 1 /ability 2
+
+energy:
+  loss-on-death: 1          # energy never drops below 0
+  gain-on-kill: 0
+
+trust:
+  mutual-required: false   # true = both players must /trust each other
+  disable-pvp: false       # true = trusted players cannot melee each other at all
+
+stun:
+  allowed-items: [GOLDEN_APPLE, ENCHANTED_GOLDEN_APPLE, POTION, SPLASH_POTION, LINGERING_POTION]
+
+bleed:
+  damage-per-second: 1.0   # half a heart per second
+
+hud:
+  mode: glyph              # glyph = needs the resource pack (icon with bar underneath); text = plain fallback
+  update-ticks: 4
+
+gear:
+  scan-ticks: 10           # how often netherite/diamond swapping is checked
+
+items:
+  use-item-model: true     # needs the resource pack (makes the heads look like your orb art)
+  energy:
+    name: "Energy Marble"
+    texture: ""            # optional base64 skin texture value (minecraft-heads.com style)
+  reroll:
+    name: "Class Reroller"
+    texture: ""
+
+# Optional crafting recipes (shaped). Ingredient letters map to materials. Off by default.
+recipes:
+  energy:      # Energy Marble
+    enabled: false
+    amount: 1
+    shape: ["DND", "NEN", "DND"]
+    ingredients: {D: DIAMOND_BLOCK, N: NETHERITE_INGOT, E: NETHER_STAR}
+  reroll:      # Class Reroller
+    enabled: false
+    amount: 1
+    shape: ["EGE", "GNG", "EGE"]
+    ingredients: {E: EMERALD_BLOCK, G: GOLD_BLOCK, N: NETHER_STAR}
+
+classes:
+  # ---------------------------------------------------------------- SHACKLED
+  shackled:
+    a1: {cooldown: 30, range: 30, seconds: 10}
+    a2: {cooldown: 20, range: 30, damage: 4.0, bleed-seconds: 5}
+    passives:
+      kb: {knockback-resistance: 0.5}
+      slow: {when: hit, chance: 10, action: effect, effect: slowness, level: 3, seconds: 10}
+      bleed: {when: hit, chance: 5, action: bleed, seconds: 5}
+      shuffle: {when: hit, chance: 1, action: shuffle}
+      enchain: {when: hit, chance: 2, action: enchain, seconds: 2}
+
+  # ---------------------------------------------------------------- MOANDER
+  moander:
+    a1:
+      cooldown: 60
+      effects: ["regeneration:3:30", "resistance:2:30", "absorption:5:120"]
+    a2:
+      cooldown: 45
+      range: 30
+      steal-hp: 4.0          # 2 hearts taken from the target
+      my-hearts: 12          # your heart count while active
+      seconds: 20
+      effects: ["wither:2:10"]
+    passives:
+      wither: {when: hit, chance: 10, action: effect, effect: wither, level: 2, seconds: 3}
+      poison: {when: hit, chance: 10, action: effect, effect: poison, level: 3, seconds: 3}
+      immune: {immune-effects: [wither, poison, weakness]}
+      rotten:
+        foods: [ROTTEN_FLESH]
+        remove-hunger: true
+        extra-saturation: 8.8          # brings rotten flesh up to golden-apple saturation
+        effects: ["regeneration:2:5", "absorption:1:120"]
+      armor: {armor-damage-multiplier: 1.25}
+      skeleton: {ignored-by: [WITHER_SKELETON]}
+
+  # ---------------------------------------------------------------- CHRONO
+  chrono:
+    a1: {cooldown: 60, radius: 10, seconds: 2.5}
+    a2:
+      cooldown: 30
+      seconds: 20
+      repair: 3
+      effects: ["regeneration:3:20"]
+    passives:
+      eat: {eat-time-multiplier: 0.8}
+      armor: {armor-damage-multiplier: 1.25}
+      haste: {permanent-effects: ["haste:2"]}
+      repair: {repair-amount: 2, repair-every-seconds: 5}
+      wither: {when: hit, chance: 10, action: effect, effect: wither, level: 2, seconds: 3}
+      regen: {permanent-effects: ["regeneration:1"]}
+
+  # ---------------------------------------------------------------- ICOR
+  icor:
+    a1: {cooldown: 30, range: 30, damage: 2.0, borrow-seconds: 300}
+    a2: {cooldown: 60, range: 30, steal-hp: 4.0, my-hearts: 15, seconds: 30}
+    passives:
+      heal: {heal-on-hit: 1.0}
+      bleed: {when: hit, chance: 5, action: bleed, seconds: 5}
+      strength: {permanent-effects: ["strength:1"]}
+      cap: {max-damage: 8.0}
+      regen: {permanent-effects: ["regeneration:1"]}
+      immune: {immune-effects: [wither]}
+
+  # ---------------------------------------------------------------- BERSERKER
+  berserker:
+    a1:
+      cooldown: 60
+      seconds: 20
+      effects: ["strength:2:20", "speed:2:20"]
+      after-effects: ["weakness:1:20", "slowness:1:20"]
+      after-hearts: 8
+      after-seconds: 20
+    a2: {cooldown: 30, damage: 2.0, swings: 3, radius: 3.5, interval-ticks: 4}
+    passives:
+      neth: {netherite-upgrade: [AXE]}
+      shield: {shield-disable-multiplier: 2.0}
+      strength: {permanent-effects: ["strength:1"]}
+      stun: {when: hit, chance: 5, action: stun, seconds: 1.5, crit-only: true, axe-only: true}
+      haste: {permanent-effects: ["haste:1"]}
+      timber: {timber: true, require-axe: true, max-blocks: 256}
+
+  # ---------------------------------------------------------------- DOLUS
+  dolus:
+    a1: {cooldown: 20, range: 30, damage: 6.0, stun-seconds: 1}
+    passives:
+      resist: {permanent-effects: ["resistance:1"]}
+      gapple: {foods: [GOLDEN_APPLE, ENCHANTED_GOLDEN_APPLE], refund-chance: 20}
+      kb: {knockback-resistance: 0.5}
+      ores:
+        ores:
+          emerald: {materials: [EMERALD_ORE, DEEPSLATE_EMERALD_ORE], cooldown: 0, effects: ["hero_of_the_village:5:3600"]}
+          lapis: {materials: [LAPIS_ORE, DEEPSLATE_LAPIS_ORE], cooldown: 120, enchant-boost: 1, seconds: 30}
+          diamond: {materials: [DIAMOND_ORE, DEEPSLATE_DIAMOND_ORE], cooldown: 120, effects: ["strength:2:5", "speed:2:5"]}
+          iron: {materials: [IRON_ORE, DEEPSLATE_IRON_ORE], cooldown: 180, effects: ["resistance:2:30"]}
+      glow: {glow-radius: 50}
+      fortune: {fortune-multiplier: 2}
+
+  # ---------------------------------------------------------------- SAMURAI
+  samurai:
+    a1: {cooldown: 30, seconds: 10, damage-multiplier: 1.25, sword: NETHERITE_SWORD}
+    a2: {cooldown: 20, range: 20, bonus-damage: 3.0, behind-distance: 1.5, window-seconds: 10}
+    passives:
+      neth: {netherite-upgrade: [SWORD]}
+      combo: {combo-start: 3, combo-every: 2, combo-multiplier: 1.5, combo-window-seconds: 3}
+      strength: {permanent-effects: ["strength:1"]}
+      bleed: {when: hit, chance: 5, action: bleed, seconds: 5}
+      speed: {permanent-effects: ["speed:1"]}
+      nofall: {no-fall-damage: true}
+
+  # ---------------------------------------------------------------- YMIR
+  ymir:
+    a1: {cooldown: 120, range: 20, radius: 25, max-seconds: 0}   # max-seconds 0 = until death / re-press
+    a2: {cooldown: 60, seconds: 5}
+    passives:
+      resist: {permanent-effects: ["resistance:1"]}
+      shield: {no-shield-durability: true}
+      slow: {when: damaged, chance: 5, action: effect, effect: slowness, level: 2, seconds: 10}
+      thorns: {thorns: 1.0}
+      stun: {shield-stun-multiplier: 0.5}
+      resist2: {shield-stun-effects: ["resistance:2"]}
+
+  # ---------------------------------------------------------------- VARUNA
+  varuna:
+    a1: {cooldown: 30, radius: 15, damage: 4.0, pull: 2.5}
+    a2: {cooldown: 40, range: 25, seconds: 5, damage-per-second: 1.0}
+    passives:
+      regen: {when: water_or_rain, effects: ["regeneration:2"]}
+      crit: {crit-in-water: 1.5}
+      grace: {permanent-effects: ["dolphins_grace:1", "conduit_power:1"]}
+      trident: {trident-attack-damage: 10, trident-attack-speed: 1.6}
+      kelp: {foods: [DRIED_KELP], extra-food: 5, extra-saturation: 13.8}   # = golden carrot (6 food / 14.4 sat)
+      riptide: {trident-riptide: 3}
+
+  # ---------------------------------------------------------------- AGNI
+  agni:
+    a1: {cooldown: 60, radius: 20, seconds: 20, replace-solid-blocks: false, blocks-per-tick: 20000}
+    a2: {cooldown: 90, min-damage: 2.0, max-damage: 14.0, max-seconds: 60, decay-seconds: 8, range: 60}
+    passives:
+      ignite: {when: hit, chance: 15, action: ignite, seconds: 5}
+      fireres: {permanent-effects: ["fire_resistance:1"]}
+      lavaregen: {when: lava, effects: ["regeneration:2"]}
+      lavares: {when: lava, effects: ["resistance:2"]}
+      swim: {lava-swim: true}
+      dmg: {burning-multiplier: 1.1}
+
+  # ---------------------------------------------------------------- HEPHAESTUS
+  hephaestus:
+    a1: {cooldown: 45, radius: 10, damage: 4.0, armor-drain: 25}
+    a2: {cooldown: 30, range: 30, damage: 2.0, stun-seconds: 2, item: NETHERITE_AXE}
+    passives:
+      neth: {netherite-upgrade: [ARMOR]}
+      gapple: {foods: [GOLDEN_APPLE, ENCHANTED_GOLDEN_APPLE], absorption-multiplier: 2, extra-saturation: 9.6}
+      armor_less: {armor-durability-multiplier: 0.9}
+      resist: {permanent-effects: ["resistance:1"]}
+      armor_dmg: {armor-damage-multiplier: 1.25}
+      repair: {repair-amount: 2, repair-every-seconds: 5}
+
+  # ---------------------------------------------------------------- BOREUS
+  boreus:
+    a1: {cooldown: 30, distance: 30, speed: 2.0}
+    a2: {cooldown: 180, seconds: 20, mace-cooldown-after: 120, windburst-level: 1, windburst-velocity: 1.3}
+    passives:
+      mace: {mace-min-fall: 5, mace-cooldown: 10, mace-max-damage: 8.0}     # 8 damage = 4 hearts max
+      wind: {wind-charge-straight: true, wind-charge-multiplier: 1.5}
+      refund: {wind-charge-refund: 50}
+      sculk: {sculk-silent: true}
+      nofall: {no-fall-damage: true, fall-damage-on: [POINTED_DRIPSTONE]}
+      speed: {permanent-effects: ["speed:2"]}
