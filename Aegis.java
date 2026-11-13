@@ -16,7 +16,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class Aegis extends JavaPlugin {
     public static Aegis I;
     public final Map<UUID, PlayerData> data = new HashMap<>();
-    public NamespacedKey itemKey, tempKey, gearKey, boostKey, windKey;
+    public NamespacedKey itemKey, tempKey, gearKey, boostKey, windKey, petKey;
     private File dataFile;
 
     @Override
@@ -28,6 +28,7 @@ public final class Aegis extends JavaPlugin {
         gearKey = new NamespacedKey(this, "gear");
         boostKey = new NamespacedKey(this, "boost");
         windKey = new NamespacedKey(this, "windburst");
+        petKey = new NamespacedKey(this, "pet_owner");
         dataFile = new File(getDataFolder(), "data.yml");
         loadData();
 

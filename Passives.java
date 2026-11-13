@@ -116,6 +116,15 @@ final class Passives {
         Fx.proc(target, n);
     }
 
+    /** Standing on / in any listed sculk block (incl. catalysts, shriekers, sensors, veins). */
+    static boolean onSculk(Player p, ConfigurationSection n) {
+        java.util.Set<String> mats = new java.util.HashSet<>(n.getStringList("sculk-blocks"));
+        org.bukkit.Location l = p.getLocation();
+        for (double dy : new double[]{-0.1, 0.5, -1.0})
+            if (mats.contains(l.clone().add(0, dy, 0).getBlock().getType().name())) return true;
+        return false;
+    }
+
     // ------------------------------------------------------------ once-per-second work
     static void tick(Player p, int counter) {
         PlayerData d = Aegis.I.pd(p);
@@ -125,7 +134,8 @@ final class Passives {
             if (n == null) continue;
 
             String when = n.getString("when", "");
-            if ((when.equals("water_or_rain") && p.isInWaterOrRain()) || (when.equals("lava") && p.isInLava())) {
+            if ((when.equals("water_or_rain") && p.isInWaterOrRain()) || (when.equals("lava") && p.isInLava())
+                    || (when.equals("sculk") && onSculk(p, n))) {
                 for (String s : n.getStringList("effects")) {
                     String[] a = s.split(":");
                     PotionEffectType t = Abilities.fx(a[0]);
@@ -133,6 +143,9 @@ final class Passives {
                     p.addPotionEffect(new PotionEffect(t, 60, Math.max(0, Integer.parseInt(a[1].trim()) - 1), false, false, true));
                 }
             }
+
+            if (n.getStringList("ignored-by").contains("WARDEN"))
+                for (org.bukkit.entity.Warden wd : p.getWorld().getNearbyEntitiesByType(org.bukkit.entity.Warden.class, p.getLocation(), 64)) wd.clearAnger(p);
 
             if (n.contains("repair-amount")) {
                 int every = Math.max(1, n.getInt("repair-every-seconds", 5));

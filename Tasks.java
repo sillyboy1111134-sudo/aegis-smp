@@ -21,6 +21,7 @@ final class Tasks {
             @Override public void run() {
                 counter++;
                 Status.tickBleed();
+                Pets.tick();
                 for (Player p : Bukkit.getOnlinePlayers()) Passives.tick(p, counter);
             }
         }.runTaskTimer(pl, 20, 20);

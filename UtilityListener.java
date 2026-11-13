@@ -84,6 +84,36 @@ public final class UtilityListener implements Listener {
         }
     }
 
+    /** Azaroth's pet dies -> cooldown. Midas: Bounty multiplier and head drops. */
+    @EventHandler
+    public void onMobDeath(org.bukkit.event.entity.EntityDeathEvent e) {
+        LivingEntity v = e.getEntity();
+        if (v instanceof Warden w && Pets.isPet(w)) { e.getDrops().clear(); e.setDroppedExp(0); Pets.onPetDeath(w); return; }
+        Player k = v.getKiller();
+        if (k == null || v instanceof Player || v instanceof ArmorStand) return;
+
+        if (Status.on(Status.bounty, k)) {
+            int mul = Math.max(1, (int) pl.getConfig().getDouble("classes.midas.a2.multiplier", 20));
+            int maxStacks = Math.max(1, (int) pl.getConfig().getDouble("classes.midas.a2.max-stacks-per-kill", 256));
+            List<ItemStack> orig = new ArrayList<>(e.getDrops());
+            e.getDrops().clear();
+            int count = 0;
+            for (ItemStack s : orig) {
+                int remaining = s.getAmount() * mul;
+                while (remaining > 0 && count < maxStacks) {
+                    ItemStack c = s.clone();
+                    int n = Math.min(remaining, c.getMaxStackSize());
+                    c.setAmount(n);
+                    e.getDrops().add(c);
+                    remaining -= n;
+                    count++;
+                }
+            }
+        }
+        ConfigurationSection hn = Passives.first(k, "head-chance");
+        if (hn != null && Passives.roll(hn.getDouble("head-chance", 5))) e.getDrops().add(Heads.headFor(v, hn));
+    }
+
     @EventHandler
     public void onRespawn(PlayerRespawnEvent e) {
         Player p = e.getPlayer();
@@ -287,20 +317,25 @@ public final class UtilityListener implements Listener {
         Material src = e.getBlockState().getType();
         ItemStack tool = p.getInventory().getItemInMainHand();
 
-        // Hephaestus: autosmelt + double ancient debris
+        // Hephaestus / Midas: autosmelt + multiplied ores; Midas: nether gold ore drops ingots
         ConfigurationSection sm = Passives.first(p, "autosmelt");
-        if (sm != null) {
-            boolean oresOnly = sm.getBoolean("autosmelt-ores-only", true);
+        ConfigurationSection ng = Passives.first(p, "nether-gold-ingot-amount");
+        if (sm != null || ng != null) {
             boolean silk = tool.getEnchantmentLevel(Enchantment.SILK_TOUCH) > 0;
             boolean oreSource = src.name().endsWith("_ORE") || src == Material.ANCIENT_DEBRIS;
-            int debris = Math.max(1, sm.getInt("debris-multiplier", 2));
+            boolean oresOnly = sm == null || sm.getBoolean("autosmelt-ores-only", true);
+            int oreMul = sm == null ? 1 : Math.max(1, sm.getInt("ore-multiplier", 1));
+            int debris = sm == null ? 1 : Math.max(1, sm.getInt("debris-multiplier", 2));
             for (Item i : e.getItems()) {
                 ItemStack s = i.getItemStack();
-                if (!silk && (!oresOnly || oreSource)) {
+                if (ng != null && src == Material.NETHER_GOLD_ORE && s.getType() == Material.GOLD_NUGGET)
+                    s = new ItemStack(Material.GOLD_INGOT, Math.max(1, ng.getInt("nether-gold-ingot-amount", 1)));
+                if (sm != null && !silk && (!oresOnly || oreSource)) {
                     Material r = Smelting.result(s.getType());
                     if (r != null) s = s.withType(r);
                 }
-                if (src == Material.ANCIENT_DEBRIS) s.setAmount(Math.min(s.getMaxStackSize(), s.getAmount() * debris));
+                int mul = src == Material.ANCIENT_DEBRIS ? debris : (oreSource && !silk ? oreMul : 1);
+                if (mul > 1) s.setAmount(Math.min(s.getMaxStackSize(), s.getAmount() * mul));
                 i.setItemStack(s);
             }
         }

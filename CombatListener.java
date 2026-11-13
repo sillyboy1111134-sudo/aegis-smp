@@ -35,6 +35,14 @@ public final class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDamage(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof LivingEntity v)) return;
+        // Fireball explosions only hurt through Abilities.explode (armor-ignoring), never vanilla damage
+        if (Abilities.exploding && (e.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION || e.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION)) { e.setCancelled(true); return; }
+        // Chrono - Future Sight: dodge incoming hits
+        if (v instanceof Player dp && Status.dodges.containsKey(dp.getUniqueId())
+                && pl.getConfig().getStringList("classes.chrono.a2.dodge-causes").contains(e.getCause().name())) {
+            int left = Status.takeDodge(dp);
+            if (left >= 0) { e.setCancelled(true); Fx.dodge(dp, left); return; }
+        }
         if (Status.on(Status.immortal, v)) { e.setCancelled(true); return; }
         if (v instanceof Player p && e.getCause() == EntityDamageEvent.DamageCause.FALL) {
             ConfigurationSection n = Passives.first(p, "no-fall-damage");
@@ -72,6 +80,20 @@ public final class CombatListener implements Listener {
     // ------------------------------------------------------------------ melee
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onHit(EntityDamageByEntityEvent e) {
+        // Azaroth's pet Warden: never hurts its owner / trusted, deals reduced damage
+        if (e.getDamager() instanceof org.bukkit.entity.Warden pw && Pets.isPet(pw)) {
+            java.util.UUID ownerId = Pets.ownerOf(pw);
+            Player op = ownerId == null ? null : org.bukkit.Bukkit.getPlayer(ownerId);
+            if (e.getEntity() instanceof Player vp && (vp.getUniqueId().equals(ownerId) || (op != null && Abilities.trusts(op, vp)))) { e.setCancelled(true); return; }
+            e.setDamage(e.getDamage() * pl.getConfig().getDouble("classes.azaroth.a1.damage-multiplier", 0.25));
+            return;
+        }
+        // wild Wardens can't hurt Azaroth
+        if (e.getDamager() instanceof org.bukkit.entity.Warden && e.getEntity() instanceof Player wp) {
+            ConfigurationSection ig = Passives.first(wp, "ignored-by");
+            if (ig != null && ig.getStringList("ignored-by").contains("WARDEN")) { e.setCancelled(true); return; }
+        }
+        Pets.noteCombat(e);
         Player att = e.getDamager() instanceof Player a ? a : null;
         if (att != null && (Status.on(Status.stun, att) || Status.on(Status.freeze, att))) { e.setCancelled(true); return; }
         if (!(e.getEntity() instanceof LivingEntity vic)) return;
@@ -192,7 +214,7 @@ public final class CombatListener implements Listener {
             if (strong && "damaged".equals(n.getString("when", "")) && n.contains("action") && Passives.roll(n.getDouble("chance", 100)))
                 Passives.action(att, n);
             if (n.contains("thorns") && vp.isBlocking() && e.isApplicable(DamageModifier.BLOCKING) && e.getDamage(DamageModifier.BLOCKING) < 0)
-                Abilities.hurt(att, n.getDouble("thorns", 1.0), vp);
+                Abilities.hurt(att, n.getDouble("thorns", 1.0), vp, false);
         }
     }
 
@@ -227,6 +249,11 @@ public final class CombatListener implements Listener {
     // ------------------------------------------------------------------ misc
     @EventHandler(ignoreCancelled = true)
     public void onTarget(EntityTargetLivingEntityEvent e) {
+        if (Pets.isPet(e.getEntity()) && e.getTarget() instanceof Player tp) {
+            java.util.UUID ownerId = Pets.ownerOf(e.getEntity());
+            Player op = ownerId == null ? null : org.bukkit.Bukkit.getPlayer(ownerId);
+            if (tp.getUniqueId().equals(ownerId) || (op != null && Abilities.trusts(op, tp))) { e.setCancelled(true); return; }
+        }
         if (!(e.getTarget() instanceof Player p)) return;
         ConfigurationSection n = Passives.first(p, "ignored-by");
         if (n != null && n.getStringList("ignored-by").contains(e.getEntity().getType().name())) e.setCancelled(true);

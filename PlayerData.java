@@ -15,6 +15,7 @@ public final class PlayerData {
     final Map<String, long[]> cd = new HashMap<>();          // key -> {endMillis, totalMillis}
     final Set<PotionEffectType> applied = new HashSet<>();   // permanent effects we applied
     ItemStack savedOffhand;
+    int lastAbility;          // which ability was used last (for armor-damage / armor-repair keys)
     boolean rolling;          // slot-machine animation running
     ClassType pending;        // class being rolled (not revealed until the roll ends)                                  // Samurai dual wield
 

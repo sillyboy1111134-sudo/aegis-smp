@@ -14,6 +14,7 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.BundleMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -89,9 +90,18 @@ final class Abilities {
         }
     }
 
-    static void hurt(LivingEntity v, double dmg, Player src) {
+    static void hurt(LivingEntity v, double dmg, Player src) { hurt(v, dmg, src, true); }
+
+    /** ability = true: also applies the used ability's "armor-damage" key (durability removed from the target). */
+    static void hurt(LivingEntity v, double dmg, Player src, boolean ability) {
         inAbility = true;
         try { v.damage(dmg, src); } finally { inAbility = false; }
+        if (!ability) return;
+        PlayerData d = pl().pd(src);
+        if (d.type != null && d.lastAbility > 0) {
+            int ad = (int) v(src, d.lastAbility, "armor-damage", 0);
+            if (ad > 0) Gear.armorDelta(v, ad);
+        }
     }
 
     static void hurtRaw(LivingEntity v, double dmg) {
@@ -128,6 +138,10 @@ final class Abilities {
 
     /** Travelling block/item projectile used by several abilities. */
     static void fire(Player p, Material mat, boolean asItem, double range, double speed, double hitR, Consumer<LivingEntity> onHit) {
+        fire(p, mat, asItem, range, speed, hitR, onHit, null);
+    }
+
+    static void fire(Player p, Material mat, boolean asItem, double range, double speed, double hitR, Consumer<LivingEntity> onHit, Consumer<Location> onBlock) {
         Location start = p.getEyeLocation();
         Vector dir = start.getDirection().normalize();
         World w = start.getWorld();
@@ -158,7 +172,13 @@ final class Abilities {
                     onHit.accept(found);
                     d.remove(); cancel(); return;
                 }
-                if (br != null) { w.spawnParticle(Particle.POOF, next, 10, .2, .2, .2, .05); d.remove(); cancel(); return; }
+                if (br != null) {
+                    Location hitLoc = br.getHitPosition().toLocation(w);
+                    w.spawnParticle(Particle.POOF, next, 10, .2, .2, .2, .05);
+                    d.remove(); cancel();
+                    if (onBlock != null) onBlock.accept(hitLoc);
+                    return;
+                }
                 d.teleport(next);
                 Fx.trail(next, mat);
                 travelled += speed;
@@ -174,16 +194,18 @@ final class Abilities {
         if (t == null || d.rolling || (n == 2 && t.a2 == null) || p.isDead()) return;
         if (Status.on(Status.stun, p) || Status.on(Status.freeze, p)) { msg(p, "You are stunned!"); return; }
 
+        if (t == ClassType.AZAROTH && n == 1 && Pets.alive(p)) { msg(p, "Your Warden is still alive."); return; }
         boolean toggle = (t == ClassType.YMIR && n == 1 && duels.containsKey(p.getUniqueId()))
                 || (t == ClassType.AGNI && n == 2 && charges.containsKey(p.getUniqueId()));
         if (!toggle && d.remaining(n) > 0) {
             msg(p, t.abilityName(n) + " is on cooldown (" + String.format("%.1f", d.remaining(n)) + "s)");
             return;
         }
+        d.lastAbility = n;
         boolean ok = switch (t) {
             case SHACKLED -> n == 1 ? enchain(p) : chainShot(p);
             case MOANDER -> n == 1 ? drain(p) : witherAway(p);
-            case CHRONO -> n == 1 ? timestop(p) : timeReversal(p);
+            case CHRONO -> n == 1 ? timestop(p) : futureSight(p);
             case ICOR -> n == 1 ? transfusion(p) : lifesteal(p);
             case BERSERKER -> n == 1 ? gambit(p) : rapidStrikes(p);
             case DOLUS -> seismic(p);
@@ -193,8 +215,15 @@ final class Abilities {
             case AGNI -> n == 1 ? magmaBath(p) : fireball(p);
             case HEPHAESTUS -> n == 1 ? shatter(p) : piercing(p);
             case BOREUS -> n == 1 ? breezyDash(p) : overdrive(p);
+            case AZAROTH -> n == 1 ? deepsCall(p) : Domain.start(p);
+            case MIDAS -> n == 1 ? goldenTouch(p) : bounty(p);
         };
-        if (ok) { d.startCd(n, v(p, n, "cooldown", 30)); Fx.cast(p, t, n); }
+        if (ok) {
+            d.startCd(n, v(p, n, "cooldown", 30));
+            int rep = (int) v(p, n, "armor-repair", 0);          // durability healed on every armor piece you wear
+            if (rep > 0) Gear.armorDelta(p, -rep);
+            Fx.cast(p, t, n);
+        }
     }
 
     // ================================================================ SHACKLED
@@ -217,10 +246,10 @@ final class Abilities {
         Fx.part(hl, Particle.ENCHANTED_HIT, 40, .4, .4, .4, .3);
         if (r.getHitEntity() instanceof LivingEntity t) {
             hurt(t, v(p, 2, "damage", 4), p);
-            pull(t, p.getLocation(), 3.0);
+            pull(t, p.getLocation(), v(p, 2, "pull-strength", 3.0));
             Status.bleed(t, v(p, 2, "bleed-seconds", 5));
         } else {
-            pull(p, hl, 3.5);
+            pull(p, hl, v(p, 2, "self-pull-strength", 3.5));
         }
         snd(p, "block.chain.place");
         return true;
@@ -292,25 +321,20 @@ final class Abilities {
         return true;
     }
 
-    static boolean timeReversal(Player p) {
-        int dur = ticks(p, v(p, 2, "seconds", 20));
-        int amt = (int) v(p, 2, "repair", 3);
-        give(p, p, list(p, 2, "effects"), true);
-        new BukkitRunnable() {
-            int t = 0;
-            @Override public void run() {
-                if (!p.isOnline() || p.isDead() || t >= dur) { cancel(); return; }
-                Gear.armorDelta(p, -amt);
-                p.getWorld().spawnParticle(Particle.END_ROD, p.getLocation().add(0, 1, 0), 8, .4, .6, .4, .02);
-                t += 20;
-            }
-        }.runTaskTimer(pl(), 0, 20);
+    static boolean futureSight(Player p) {
+        int dodges = Math.max(1, (int) v(p, 2, "dodges", 5));
+        double sec = v(p, 2, "seconds", 30);
+        long until = sec <= 0 ? Long.MAX_VALUE : System.currentTimeMillis() + (long) (secs(p, sec) * 1000);
+        Status.dodges.put(p.getUniqueId(), new long[]{dodges, until});
+        p.sendMessage(Component.text("Future Sight: you will dodge the next " + dodges + " hits.", NamedTextColor.AQUA));
+        snd(p, "block.beacon.activate");
+        Fx.futureSight(p);
         return true;
     }
 
     // ================================================================ ICOR
     static boolean transfusion(Player p) {
-        fire(p, Material.REDSTONE_BLOCK, false, v(p, 1, "range", 30), 1.6, 1.0, t -> {
+        fire(p, Material.REDSTONE_BLOCK, false, v(p, 1, "range", 30), v(p, 1, "projectile-speed", 1.6), v(p, 1, "hit-radius", 1.0), t -> {
             hurt(t, v(p, 1, "damage", 2), p);
             for (PotionEffect e : new ArrayList<>(p.getActivePotionEffects())) {
                 if (e.getType().getEffectCategory() == PotionEffectType.Category.HARMFUL) {
@@ -372,7 +396,7 @@ final class Abilities {
 
     // ================================================================ DOLUS
     static boolean seismic(Player p) {
-        fire(p, Material.DIRT, false, v(p, 1, "range", 30), 1.5, 1.0, t -> {
+        fire(p, Material.DIRT, false, v(p, 1, "range", 30), v(p, 1, "projectile-speed", 1.5), v(p, 1, "hit-radius", 1.0), t -> {
             hurt(t, v(p, 1, "damage", 6), p);
             Status.stun(t, v(p, 1, "stun-seconds", 1));
             Fx.onTarget(t, "quake");
@@ -605,6 +629,7 @@ final class Abilities {
         long total = (long) size * size * size;
         List<BlockState> saved = new ArrayList<>();
         Set<Long> mine = new HashSet<>();
+        final boolean[] done = {false};
         p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, dur + 200, 0));
         snd(p, "block.lava.pop");
         Fx.magmaDome(c, R, dur + 60);
@@ -615,7 +640,7 @@ final class Abilities {
                 @Override public void run() {
                     int n = 0;
                     while (idx >= 0 && n++ < perTick) saved.get(idx--).update(true, false);
-                    if (idx < 0) { shell.removeAll(mine); cleanups.remove(this); cancel(); }
+                    if (idx < 0) { shell.removeAll(mine); done[0] = true; cancel(); }
                 }
             }.runTaskTimer(pl(), 0, 1);
         };
@@ -646,7 +671,7 @@ final class Abilities {
                 }
             }
         }.runTaskTimer(pl(), 0, 1);
-        cleanups.add(() -> { for (int i = saved.size() - 1; i >= 0; i--) saved.get(i).update(true, false); shell.removeAll(mine); });
+        cleanups.add(() -> { if (done[0]) return; for (int i = saved.size() - 1; i >= 0; i--) saved.get(i).update(true, false); shell.removeAll(mine); done[0] = true; });
         return true;
     }
 
@@ -674,14 +699,39 @@ final class Abilities {
         double pr = chargeProgress(p, ch);
         double dmg = v(p, 2, "min-damage", 2) + (v(p, 2, "max-damage", 14) - v(p, 2, "min-damage", 2)) * Math.max(0, pr);
         cancelCharge(p, true);
-        fire(p, Material.MAGMA_BLOCK, false, v(p, 2, "range", 60), 1.2, 1.2, t -> {
-            hurt(t, dmg, p);
-            t.setFireTicks(100);
-            Fx.onTarget(t, "fire");
-            snd(t, "entity.generic.explode");
-        });
+        float power = (float) (v(p, 2, "explosion-power-min", 1.5)
+                + (v(p, 2, "explosion-power-max", 6.0) - v(p, 2, "explosion-power-min", 1.5)) * Math.max(0, Math.min(1, pr)));
+        fire(p, Material.MAGMA_BLOCK, false, v(p, 2, "range", 60), v(p, 2, "projectile-speed", 1.2), v(p, 2, "hit-radius", 1.2),
+                t -> explode(p, t.getLocation().add(0, 1, 0), power, dmg, t),
+                loc -> explode(p, loc, power, dmg, null));
         snd(p, "entity.blaze.shoot");
         return false;   // cooldown starts through cancelCharge(.., true)
+    }
+
+    static boolean exploding = false;   // lets CombatListener cancel vanilla explosion damage (we deal our own)
+
+    /** Fireball impact: our own armor-ignoring damage plus a real explosion that can break blocks. */
+    static void explode(Player p, Location at, float power, double dmg, LivingEntity direct) {
+        World w = at.getWorld();
+        double radius = Math.max(0.5, v(p, 2, "blast-radius", 5));
+        double splash = v(p, 2, "splash-damage-multiplier", 0.6);
+        double burn = v(p, 2, "burn-seconds", 5);
+        boolean fireOn = cfg().getBoolean(path(p, 2, "set-fire"), true);
+        boolean breakBlocks = cfg().getBoolean(path(p, 2, "break-blocks"), true);
+        boolean self = cfg().getBoolean(path(p, 2, "self-damage"), false);
+        for (Entity e : w.getNearbyEntities(at, radius, radius, radius)) {
+            if (!(e instanceof LivingEntity le) || e instanceof ArmorStand) continue;
+            if (e.equals(p) ? !self : trusts(p, e)) continue;
+            double f = e.equals(direct) ? 1.0 : Math.max(0, 1 - e.getLocation().distance(at) / radius) * splash;
+            if (f <= 0) continue;
+            hurt(le, dmg * f, p);
+            if (burn > 0) le.setFireTicks((int) (burn * 20));
+            Vector away = e.getLocation().toVector().subtract(at.toVector());
+            if (away.lengthSquared() > 1e-4) le.setVelocity(away.normalize().multiply(0.6 * f + 0.2).setY(0.35));
+        }
+        exploding = true;
+        try { w.createExplosion(at, power, fireOn, breakBlocks, p); } finally { exploding = false; }
+        Fx.explosion(at, power);
     }
 
     static double chargeProgress(Player p, Charge c) {
@@ -718,7 +768,7 @@ final class Abilities {
 
     static boolean piercing(Player p) {
         Material m = Material.matchMaterial(s(p, 2, "item", "NETHERITE_AXE"));
-        fire(p, m == null ? Material.IRON_AXE : m, true, v(p, 2, "range", 30), 1.6, 1.0, t -> {
+        fire(p, m == null ? Material.IRON_AXE : m, true, v(p, 2, "range", 30), v(p, 2, "projectile-speed", 1.6), v(p, 2, "hit-radius", 1.0), t -> {
             hurt(t, v(p, 2, "damage", 2), p);
             Status.stun(t, v(p, 2, "stun-seconds", 2));
             Fx.onTarget(t, "axe");
@@ -795,12 +845,50 @@ final class Abilities {
         }
     }
 
+
+    // ================================================================ AZAROTH / MIDAS
+    static boolean deepsCall(Player p) {
+        if (!Pets.summon(p)) return false;
+        pl().pd(p).startKey("a1", 86400);   // stays "on cooldown" while the Warden lives; real cooldown starts when it dies
+        return false;
+    }
+
+    static boolean goldenTouch(Player p) {
+        ItemStack hand = p.getInventory().getItemInMainHand();
+        if (hand.getType().isAir()) { msg(p, "Hold the item you want to duplicate."); return false; }
+        if (Tag.SHULKER_BOXES.isTagged(hand.getType())) { msg(p, "Shulker boxes can't be duplicated."); return false; }
+        if (hand.getItemMeta() instanceof BundleMeta bm && bm.getItems().stream().anyMatch(i -> Tag.SHULKER_BOXES.isTagged(i.getType()))) {
+            msg(p, "That bundle holds a shulker box and can't be duplicated."); return false;
+        }
+        if (list(p, 1, "blocked-materials").contains(hand.getType().name())) { msg(p, "That item can't be duplicated."); return false; }
+        if (!cfg().getBoolean(path(p, 1, "allow-plugin-items"), false) && (Items.kind(hand) != null || Items.isTemp(hand))) {
+            msg(p, "That item can't be duplicated."); return false;
+        }
+        int copies = Math.max(1, (int) v(p, 1, "copies", 1));
+        boolean whole = cfg().getBoolean(path(p, 1, "whole-stack"), true);
+        for (int i = 0; i < copies; i++) {
+            ItemStack c = hand.clone();
+            if (!whole) c.setAmount(1);
+            p.getInventory().addItem(c).values().forEach(x -> p.getWorld().dropItemNaturally(p.getLocation(), x));
+        }
+        snd(p, "block.amethyst_block.chime");
+        return true;
+    }
+
+    static boolean bounty(Player p) {
+        Status.set(Status.bounty, p, secs(p, v(p, 2, "seconds", 120)));
+        p.sendMessage(Component.text("Bounty! Mob drops are x" + (int) v(p, 2, "multiplier", 20) + " for a while.", NamedTextColor.GOLD));
+        snd(p, "entity.player.levelup");
+        return true;
+    }
+
     // ================================================================ cleanup
     static void cleanup(Player p) {
         UUID u = p.getUniqueId();
         for (Duel d : new ArrayList<>(duels.values()))
             if (d.caster().equals(u) || d.other().equals(u)) endDuel(d, true);
         cancelCharge(p, false);
+        Pets.dismiss(p);
         endDual(p);
         revertBoost(p);
         Status.overdrive.remove(u);

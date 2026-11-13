@@ -7,6 +7,16 @@
 #  at 0 energy and the last at 5 energy (5 passives: 0,1,3,4,5).
 # ============================================================
 
+# ============================================================
+#  ABILITY KEYS (under classes.<class>.a1 / a2). Damage is in HP: 2.0 = 1 heart.
+#   cooldown        seconds           damage / min-damage / max-damage
+#   seconds         effect duration   radius / range / distance / speed
+#   armor-damage    durability removed from every armor piece of each target the ability damages
+#   armor-repair    durability healed on every armor piece you wear when you cast it
+#   effects         ["effect_id:LEVEL:SECONDS"]
+#  Every number an ability uses lives here - open the class block and edit it.
+# ============================================================
+
 general:
   starting-energy: 2
   max-energy: 5
@@ -67,8 +77,8 @@ recipes:
 classes:
   # ---------------------------------------------------------------- SHACKLED
   shackled:
-    a1: {cooldown: 30, range: 30, seconds: 10}
-    a2: {cooldown: 20, range: 30, damage: 4.0, bleed-seconds: 5}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 30, range: 30, seconds: 10}
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 20, range: 30, damage: 4.0, bleed-seconds: 5, pull-strength: 3.0, self-pull-strength: 3.5}
     passives:
       kb: {knockback-resistance: 0.5}
       slow: {when: hit, chance: 10, action: effect, effect: slowness, level: 3, seconds: 10}
@@ -79,9 +89,13 @@ classes:
   # ---------------------------------------------------------------- MOANDER
   moander:
     a1:
+      armor-damage: 0
+      armor-repair: 0
       cooldown: 60
       effects: ["regeneration:3:30", "resistance:2:30", "absorption:5:120"]
     a2:
+      armor-damage: 0
+      armor-repair: 0
       cooldown: 45
       range: 30
       steal-hp: 4.0          # 2 hearts taken from the target
@@ -102,12 +116,14 @@ classes:
 
   # ---------------------------------------------------------------- CHRONO
   chrono:
-    a1: {cooldown: 60, radius: 10, seconds: 2.5}
-    a2:
-      cooldown: 30
-      seconds: 20
-      repair: 3
-      effects: ["regeneration:3:20"]
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 60, radius: 10, seconds: 2.5}
+    a2:                      # Future Sight: dodge the next hits
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 45
+      dodges: 5
+      seconds: 30            # how long the dodges last (0 = until used up)
+      dodge-causes: [ENTITY_ATTACK, ENTITY_SWEEP_ATTACK, PROJECTILE]
     passives:
       eat: {eat-time-multiplier: 0.8}
       armor: {armor-damage-multiplier: 1.25}
@@ -118,8 +134,8 @@ classes:
 
   # ---------------------------------------------------------------- ICOR
   icor:
-    a1: {cooldown: 30, range: 30, damage: 2.0, borrow-seconds: 300}
-    a2: {cooldown: 60, range: 30, steal-hp: 4.0, my-hearts: 15, seconds: 30}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 30, range: 30, damage: 2.0, borrow-seconds: 300, projectile-speed: 1.6, hit-radius: 1.0}
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 60, range: 30, steal-hp: 4.0, my-hearts: 15, seconds: 30}
     passives:
       heal: {heal-on-hit: 1.0}
       bleed: {when: hit, chance: 5, action: bleed, seconds: 5}
@@ -131,13 +147,15 @@ classes:
   # ---------------------------------------------------------------- BERSERKER
   berserker:
     a1:
+      armor-damage: 0
+      armor-repair: 0
       cooldown: 60
       seconds: 20
       effects: ["strength:2:20", "speed:2:20"]
       after-effects: ["weakness:1:20", "slowness:1:20"]
       after-hearts: 8
       after-seconds: 20
-    a2: {cooldown: 30, damage: 2.0, swings: 3, radius: 3.5, interval-ticks: 4}
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 30, damage: 2.0, swings: 3, radius: 3.5, interval-ticks: 4}
     passives:
       neth: {netherite-upgrade: [AXE]}
       shield: {shield-disable-multiplier: 2.0}
@@ -148,7 +166,7 @@ classes:
 
   # ---------------------------------------------------------------- DOLUS
   dolus:
-    a1: {cooldown: 20, range: 30, damage: 6.0, stun-seconds: 1}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 20, range: 30, damage: 6.0, stun-seconds: 1, projectile-speed: 1.5, hit-radius: 1.0}
     passives:
       resist: {permanent-effects: ["resistance:1"]}
       gapple: {foods: [GOLDEN_APPLE, ENCHANTED_GOLDEN_APPLE], refund-chance: 20}
@@ -164,8 +182,8 @@ classes:
 
   # ---------------------------------------------------------------- SAMURAI
   samurai:
-    a1: {cooldown: 30, seconds: 10, damage-multiplier: 1.25, sword: NETHERITE_SWORD}
-    a2: {cooldown: 20, range: 20, bonus-damage: 3.0, behind-distance: 1.5, window-seconds: 10}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 30, seconds: 10, damage-multiplier: 1.25, sword: NETHERITE_SWORD}
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 20, range: 20, bonus-damage: 3.0, behind-distance: 1.5, window-seconds: 10}
     passives:
       neth: {netherite-upgrade: [SWORD]}
       combo: {combo-start: 3, combo-every: 2, combo-multiplier: 1.5, combo-window-seconds: 3}
@@ -176,8 +194,8 @@ classes:
 
   # ---------------------------------------------------------------- YMIR
   ymir:
-    a1: {cooldown: 120, range: 20, radius: 25, max-seconds: 0}   # max-seconds 0 = until death / re-press
-    a2: {cooldown: 60, seconds: 5}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 120, range: 20, radius: 25, max-seconds: 0}   # max-seconds 0 = until death / re-press
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 60, seconds: 5}
     passives:
       resist: {permanent-effects: ["resistance:1"]}
       shield: {no-shield-durability: true}
@@ -188,8 +206,8 @@ classes:
 
   # ---------------------------------------------------------------- VARUNA
   varuna:
-    a1: {cooldown: 30, radius: 15, damage: 4.0, pull: 2.5}
-    a2: {cooldown: 40, range: 25, seconds: 5, damage-per-second: 1.0}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 30, radius: 15, damage: 4.0, pull: 2.5}
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 40, range: 25, seconds: 5, damage-per-second: 1.0}
     passives:
       regen: {when: water_or_rain, effects: ["regeneration:2"]}
       crit: {crit-in-water: 1.5}
@@ -200,8 +218,26 @@ classes:
 
   # ---------------------------------------------------------------- AGNI
   agni:
-    a1: {cooldown: 60, radius: 20, seconds: 20, replace-solid-blocks: false, blocks-per-tick: 20000}
-    a2: {cooldown: 90, min-damage: 2.0, max-damage: 14.0, max-seconds: 60, decay-seconds: 8, range: 60}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 60, radius: 20, seconds: 20, replace-solid-blocks: false, blocks-per-tick: 20000}
+    a2:                      # Fireball: damage is in HP (2.0 = 1 heart). 14.0 = 7 hearts at full charge, ignores armor
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 90
+      min-damage: 2.0
+      max-damage: 14.0
+      max-seconds: 60        # time to reach full charge
+      decay-seconds: 8       # how fast it loses power after full charge
+      range: 60
+      projectile-speed: 1.2
+      hit-radius: 1.2
+      explosion-power-min: 1.5   # block-breaking explosion size at 0% charge (TNT = 4)
+      explosion-power-max: 6.0   # ... and at 100% charge
+      blast-radius: 5            # who gets splash damage
+      splash-damage-multiplier: 0.6
+      break-blocks: true
+      set-fire: true
+      self-damage: false
+      burn-seconds: 5
     passives:
       ignite: {when: hit, chance: 15, action: ignite, seconds: 5}
       fireres: {permanent-effects: ["fire_resistance:1"]}
@@ -212,8 +248,8 @@ classes:
 
   # ---------------------------------------------------------------- HEPHAESTUS
   hephaestus:
-    a1: {cooldown: 45, radius: 10, damage: 4.0, armor-drain: 25}
-    a2: {cooldown: 30, range: 30, damage: 2.0, stun-seconds: 2, item: NETHERITE_AXE}
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 45, radius: 10, damage: 4.0, armor-drain: 25}
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 30, range: 30, damage: 2.0, stun-seconds: 2, item: NETHERITE_AXE, projectile-speed: 1.6, hit-radius: 1.0}
     passives:
       neth: {netherite-upgrade: [ARMOR]}
       gapple: {foods: [GOLDEN_APPLE, ENCHANTED_GOLDEN_APPLE], absorption-multiplier: 2, extra-saturation: 9.6}
@@ -224,8 +260,8 @@ classes:
 
   # ---------------------------------------------------------------- BOREUS
   boreus:
-    a1: {cooldown: 30, distance: 30, speed: 2.0}
-    a2: {cooldown: 180, seconds: 20, mace-cooldown-after: 120, windburst-level: 1, windburst-velocity: 1.3, overdrive-min-fall: 1.5}   # during Overdrive: no cap, no cooldown, normal mace rules
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 30, distance: 30, speed: 2.0}
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 180, seconds: 20, mace-cooldown-after: 120, windburst-level: 1, windburst-velocity: 1.3, overdrive-min-fall: 1.5}   # during Overdrive: no cap, no cooldown, normal mace rules
     passives:
       mace: {mace-min-fall: 5, mace-cooldown: 10, mace-max-damage: 8.0, mace-density: 2}   # density II mace formula, capped at 8 damage (4 hearts)
       wind: {wind-charge-straight: true, wind-charge-multiplier: 1.5}
@@ -233,3 +269,68 @@ classes:
       sculk: {sculk-silent: true}
       nofall: {no-fall-damage: true, fall-damage-on: [POINTED_DRIPSTONE]}
       speed: {permanent-effects: ["speed:2"]}
+
+  # ---------------------------------------------------------------- AZAROTH
+  azaroth:
+    a1:                      # Deep's Call: pet Warden, lasts until it dies, then cooldown-after-death
+      armor-damage: 0
+      armor-repair: 0
+      cooldown-after-death: 180
+      health-multiplier: 0.5     # pet has half a Warden's health
+      damage-multiplier: 0.25    # and deals a quarter of its damage
+      follow-teleport-distance: 20
+    a2:                      # Warden's Domain: sculk-corrupted area, darkness for enemies, warden beams
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 120
+      seconds: 60
+      radius: 15
+      effects: ["darkness:1:6"]
+      beam-interval-ticks: 20
+      beams-per-interval: 3
+      beam-damage: 6.0           # HP (3 hearts), ignores armor
+      beam-range: 25
+      aim-at-enemies-chance: 0.5
+      blocks-per-tick: 10000
+      restore: true              # false = the corruption stays forever
+      surface-materials: [SCULK, SCULK, SCULK, SCULK, SCULK, DEEPSLATE, DEEPSLATE, COBBLED_DEEPSLATE, DEEPSLATE_BRICKS]
+      vein-chance: 0.35          # decoration chances on top of the corrupted ground
+      sensor-chance: 0.03
+      calibrated-chance: 0.015
+      shrieker-chance: 0.01      # decorative only - never summons a Warden
+      catalyst-chance: 0.015
+      protected-materials: [BEDROCK, REINFORCED_DEEPSLATE, END_PORTAL_FRAME]
+    passives:
+      wardens: {ignored-by: [WARDEN]}
+      darkness: {when: hit, chance: 5, action: effect, effect: darkness, level: 1, seconds: 10}
+      resist: {permanent-effects: ["resistance:1"]}
+      strength: {permanent-effects: ["strength:1"]}
+      sculk:
+        when: sculk
+        effects: ["resistance:2", "regeneration:2"]
+        sculk-blocks: [SCULK, SCULK_CATALYST, SCULK_SHRIEKER, SCULK_SENSOR, CALIBRATED_SCULK_SENSOR, SCULK_VEIN]
+
+  # ---------------------------------------------------------------- MIDAS
+  midas:
+    a1:                      # Golden Touch: duplicates the item in your hand (never shulker boxes)
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 1800         # 30 minutes
+      copies: 1
+      whole-stack: true      # false = copies a single item
+      allow-plugin-items: false   # Energy Marbles / Rerollers can't be duplicated
+      blocked-materials: []
+    a2:                      # Bounty: mob drops multiplied
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 600
+      seconds: 120
+      multiplier: 20
+      max-stacks-per-kill: 256
+    passives:
+      neth: {netherite-upgrade: [PICKAXE, SHOVEL, HOE]}
+      haste: {permanent-effects: ["haste:2"]}
+      hero: {permanent-effects: ["hero_of_the_village:10"]}
+      mining: {autosmelt: true, autosmelt-ores-only: true, ore-multiplier: 3, debris-multiplier: 3}
+      nethergold: {nether-gold-ingot-amount: 1}
+      heads: {head-chance: 5, textures: {}}      # textures: {COW: "<base64 texture>"} for custom mob heads

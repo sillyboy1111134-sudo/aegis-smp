@@ -13,7 +13,7 @@ public enum ClassType {
     CHRONO("chrono", "Chrono",
             new String[]{"eat", "armor", "haste", "buffs", "wither", "regen"},
             new String[]{"Quick Eater", "Armor Corrosion", "Haste", "Time Dilation", "Withering Touch", "Regeneration"},
-            "Timestop", "Time Reversal"),
+            "Timestop", "Future Sight"),
     ICOR("icor", "Icor",
             new String[]{"heal", "bleed", "strength", "cap", "regen", "immune"},
             new String[]{"Vampiric Hits", "Bleeding Strikes", "Strength", "Damage Cap", "Regeneration", "Wither Immunity"},
@@ -49,7 +49,15 @@ public enum ClassType {
     BOREUS("boreus", "Boreus",
             new String[]{"mace", "wind", "refund", "sculk", "nofall", "speed"},
             new String[]{"Axe Smash", "Straight Winds", "Charge Saver", "Silent Steps", "Featherfall", "Speed"},
-            "Breezy Dash", "Overdrive");
+            "Breezy Dash", "Overdrive"),
+    AZAROTH("azaroth", "Azaroth",
+            new String[]{"wardens", "darkness", "resist", "strength", "sculk"},
+            new String[]{"Warden's Kin", "Darkening Strikes", "Resistance", "Strength", "Sculk Blessing"},
+            "Deep's Call", "Warden's Domain"),
+    MIDAS("midas", "Midas",
+            new String[]{"neth", "haste", "hero", "mining", "nethergold", "heads"},
+            new String[]{"Netherite Tools", "Haste", "Hero of the Village", "Midas Mining", "Gilded Nether", "Head Hunter"},
+            "Golden Touch", "Bounty");
 
     public final String id, display, a1, a2;
     public final String[] passives, passiveNames;

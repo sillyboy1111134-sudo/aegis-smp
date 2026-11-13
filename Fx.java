@@ -142,18 +142,8 @@ final class Fx {
             }
             case CHRONO -> {
                 if (n == 2) {
-                    int dur = Abilities.ticks(pl, Abilities.v(pl, 2, "seconds", 20));
-                    expand(feet, 4, .5, 10, 30, l -> { part(l, Particle.REVERSE_PORTAL, 1, 0, .1, 0, 0); dust(l, 1, 0, 0xFFD54F, 1.4f); });
-                    follow(pl, dur, (l, k) -> {
-                        if (k % 2 != 0) return;
-                        for (int s = 0; s < 2; s++) {
-                            double a = -k * 0.3 + s * Math.PI;
-                            double y = 2.4 - ((k * 0.08) % 2.4);
-                            Location x = l.clone().add(Math.cos(a) * 1.1, y, Math.sin(a) * 1.1);
-                            part(x, Particle.REVERSE_PORTAL, 1, 0, 0, 0, 0);
-                            dust(x, 1, 0, 0xFFD54F, 1.2f);
-                        }
-                    });
+                    expand(feet, 4, .5, 10, 30, l -> { part(l, Particle.REVERSE_PORTAL, 1, 0, .1, 0, 0); dust(l, 1, 0, 0x80D8FF, 1.4f); });
+                    burst(mid, Particle.END_ROD, 40, .3);
                 }
             }
             case ICOR -> {
@@ -197,6 +187,28 @@ final class Fx {
                     for (int h = 0; h < 3; h++) { final double yy = h * 1.0; expand(feet.clone().add(0, yy, 0), .5, 5, 12, 28, l -> { part(l, Particle.CLOUD, 1, 0, 0, 0, .02); dust(l, 1, 0, 0x80DEEA, 1.4f); }); }
                     part(mid, Particle.GUST_EMITTER_LARGE, 1, 0, 0, 0, 0);
                     follow(pl, dur, (l, k) -> spiral(l, k, 1.2, 2.4, 3, x -> { part(x, Particle.CLOUD, 1, 0, 0, 0, 0); if (k % 4 == 0) part(x, Particle.END_ROD, 1, 0, 0, 0, 0); }));
+                }
+            }
+            case AZAROTH -> {
+                if (n == 2) {
+                    double R = Abilities.v(pl, 2, "radius", 15);
+                    for (int h = 0; h < 3; h++) {
+                        final double yy = h * 1.2;
+                        expand(feet.clone().add(0, yy, 0), 1, R, 22, 64, l -> { part(l, Particle.SCULK_SOUL, 1, 0, .1, 0, .02); dust(l, 1, 0, 0x00ACC1, 1.6f); });
+                    }
+                    burst(mid, Particle.SCULK_SOUL, 80, .5);
+                    part(mid, Particle.SONIC_BOOM, 1, 0, 0, 0, 0);
+                }
+            }
+            case MIDAS -> {
+                if (n == 1) {
+                    burst(mid, Particle.WAX_ON, 40, .5);
+                    expand(feet, .5, 4, 10, 28, l -> { dust(l, 1, 0, 0xFFD700, 1.6f); part(l, Particle.END_ROD, 1, 0, .1, 0, .02); });
+                    part(mid.clone().add(0, 1, 0), Particle.HAPPY_VILLAGER, 12, .5, .4, .5, 0);
+                } else {
+                    burst(mid, Particle.TOTEM_OF_UNDYING, 50, .6);
+                    expand(feet, .5, 6, 12, 36, l -> { dust(l, 1, 0, 0xFFD700, 1.8f); part(l, Particle.WAX_ON, 1, 0, .1, 0, 0); });
+                    follow(pl, 60, (l, k) -> { spiral(l, k, 1.1, 2.6, 3, x -> { dust(x, 1, 0, 0xFFD700, 1.4f); part(x, Particle.WAX_ON, 1, 0, 0, 0, 0); }); });
                 }
             }
             default -> { }
@@ -419,6 +431,7 @@ final class Fx {
             case "effect" -> {
                 switch (fx) {
                     case "wither" -> { burst(m, Particle.SOUL, 15, .1); dust(m, 25, .5, 0x101010, 1.7f); }
+                    case "darkness" -> { burst(m, Particle.SCULK_SOUL, 15, .1); dust(m, 25, .5, 0x01222B, 1.8f); }
                     case "poison" -> { part(m, Particle.HAPPY_VILLAGER, 12, .4, .5, .4, 0); dust(m, 20, .5, 0x4CAF50, 1.5f); }
                     case "slowness" -> { burst(m, Particle.SNOWFLAKE, 25, .1); dust(m, 20, .5, 0x90CAF9, 1.5f); }
                     default -> burst(m, Particle.ENCHANTED_HIT, 15, .2);
@@ -497,6 +510,78 @@ final class Fx {
         follow(p, 40, (l, k) -> spiral(l, k, 1.1, 2.4, 4, x -> part(x, Particle.END_ROD, 1, 0, 0, 0, 0)));
     }
 
+    static void summonPet(Location l) {
+        if (!on()) return;
+        burst(l.clone().add(0, 1, 0), Particle.SCULK_SOUL, 70, .4);
+        expand(l.clone().add(0, .2, 0), .5, 4, 12, 32, x -> { part(x, Particle.SCULK_SOUL, 1, 0, .1, 0, .02); dust(x, 1, 0, 0x00ACC1, 1.6f); });
+        part(l.clone().add(0, 1, 0), Particle.SONIC_BOOM, 1, 0, 0, 0, 0);
+    }
+
+    static void domainAmbient(Location c, int R) {
+        if (!on()) return;
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        for (int i = 0; i < n(18); i++) {
+            Vector v = new Vector(r.nextGaussian(), r.nextGaussian(), r.nextGaussian());
+            if (v.lengthSquared() < 1e-6) continue;
+            v.normalize().multiply(R * Math.cbrt(r.nextDouble()));
+            Location x = c.clone().add(v);
+            if (i % 2 == 0) part(x, Particle.SCULK_SOUL, 1, 0, 0, 0, 0.01);
+            else dust(x, 1, 0, 0x00ACC1, 1.5f);
+        }
+    }
+
+    static void sonicBeam(Location a, Location b) {
+        if (!on()) return;
+        int[] k = {0};
+        line(a, b, 0.6, l -> {
+            part(l, Particle.SCULK_SOUL, 1, .02, .02, .02, 0);
+            dust(l, 1, .03, 0x00E5FF, 1.5f);
+            if (k[0]++ % 4 == 0) part(l, Particle.SONIC_BOOM, 1, 0, 0, 0, 0);
+        });
+        burst(b, Particle.SCULK_SOUL, 15, .2);
+    }
+
+    /** Orbiting markers = dodges you have left. */
+    static void futureSight(Player p) {
+        if (!on()) return;
+        new BukkitRunnable() {
+            int t = 0;
+            @Override public void run() {
+                long[] st = Status.dodges.get(p.getUniqueId());
+                if (st == null || !p.isOnline()) { cancel(); return; }
+                int left = (int) st[0];
+                Location base = p.getLocation().add(0, 1, 0);
+                for (int i = 0; i < left; i++) {
+                    double a = t * 0.15 + i * Math.PI * 2 / left;
+                    Location x = base.clone().add(Math.cos(a) * 1.1, Math.sin(t * 0.1 + i) * 0.3, Math.sin(a) * 1.1);
+                    part(x, Particle.END_ROD, 1, 0, 0, 0, 0);
+                    dust(x, 1, 0, 0x80D8FF, 1.3f);
+                }
+                if (t % 6 == 0) part(base, Particle.REVERSE_PORTAL, 4, .5, .8, .5, .02);
+                t += 2;
+            }
+        }.runTaskTimer(Aegis.I, 0, 2);
+    }
+
+    static void dodge(Player p, int left) {
+        Location m = p.getLocation().add(0, 1, 0);
+        p.sendActionBar(net.kyori.adventure.text.Component.text("Dodged! " + left + " left", net.kyori.adventure.text.format.NamedTextColor.AQUA));
+        p.getWorld().playSound(p.getLocation(), "entity.enderman.teleport", 1f, 1.6f);
+        if (!on()) return;
+        burst(m, Particle.REVERSE_PORTAL, 40, .5);
+        sphere(m, 1.2, 40, x -> dust(x, 1, 0, 0x80D8FF, 1.5f));
+        expand(p.getLocation().add(0, .2, 0), .5, 3, 6, 24, l -> part(l, Particle.END_ROD, 1, 0, .1, 0, .02));
+    }
+
+    static void explosion(Location at, float power) {
+        if (!on()) return;
+        part(at, Particle.EXPLOSION_EMITTER, 1, 0, 0, 0, 0);
+        burst(at, Particle.FLAME, 80, .4);
+        burst(at, Particle.LAVA, 20, .3);
+        burst(at, Particle.LARGE_SMOKE, 25, .2);
+        expand(at, .5, Math.max(3, power), 8, 40, l -> { part(l, Particle.FLAME, 1, 0, .1, 0, .03); dust(l, 1, 0, 0xFF6D00, 1.8f); });
+    }
+
     /** Constant, class-coloured aura. Gets denser with every energy. */
     static void ambient(Player p) {
         if (!on() || !Aegis.I.getConfig().getBoolean("particles.ambient", true)) return;
@@ -521,6 +606,8 @@ final class Fx {
                 case AGNI -> part(l, Particle.FLAME, 1, 0, 0, 0, 0);
                 case HEPHAESTUS -> { dust(l, 1, 0, 0xFF6D00, 1.2f); if (i == 0) part(l, Particle.LAVA, 1, 0, 0, 0, 0); }
                 case BOREUS -> part(l, Particle.CLOUD, 1, 0, 0, 0, 0);
+                case AZAROTH -> { part(l, Particle.SCULK_SOUL, 1, 0, 0, 0, 0); if (i == 0) dust(l, 1, 0, 0x00ACC1, 1.2f); }
+                case MIDAS -> { dust(l, 1, 0, 0xFFD700, 1.2f); if (i == 0) part(l, Particle.WAX_ON, 1, 0, 0, 0, 0); }
             }
         }
     }

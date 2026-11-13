@@ -25,6 +25,18 @@ final class Status {
     static final Map<UUID, Long> swift = new HashMap<>();
     static final Map<UUID, Long> bleed = new HashMap<>();
     static final Map<UUID, Long> overdrive = new HashMap<>();
+    static final Map<UUID, Long> bounty = new HashMap<>();
+    static final Map<UUID, long[]> dodges = new HashMap<>();   // Future Sight: {dodges left, expiry millis}
+
+    /** Uses up one dodge. Returns dodges left afterwards, or -1 if the player has none. */
+    static int takeDodge(Player p) {
+        long[] st = dodges.get(p.getUniqueId());
+        if (st == null) return -1;
+        if (st[1] < System.currentTimeMillis()) { dodges.remove(p.getUniqueId()); return -1; }
+        st[0]--;
+        if (st[0] <= 0) dodges.remove(p.getUniqueId());
+        return (int) Math.max(0, st[0]);
+    }
 
     static boolean on(Map<UUID, Long> m, Entity e) {
         Long t = m.get(e.getUniqueId());
@@ -102,7 +114,7 @@ final class Status {
     static void clear(Player p) {
         UUID id = p.getUniqueId();
         stun.remove(id); freeze.remove(id); enchain.remove(id); immortal.remove(id);
-        dual.remove(id); swift.remove(id); bleed.remove(id); overdrive.remove(id);
+        dual.remove(id); swift.remove(id); bleed.remove(id); overdrive.remove(id); dodges.remove(id); bounty.remove(id);
         clearMods(p);
     }
 }
