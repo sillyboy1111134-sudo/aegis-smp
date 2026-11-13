@@ -16,7 +16,7 @@ commands:
     usage: /myclass
   aegis:
     description: Admin command
-    usage: /aegis <give|setclass|setenergy|reload>
+    usage: /aegis <give|setclass|setenergy|enchant|reload>
     permission: aegis.admin
 permissions:
   aegis.admin:

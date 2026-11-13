@@ -32,78 +32,62 @@ final class Domain {
 
     static boolean start(Player p) {
         Aegis pl = Aegis.I;
-        int R = Math.max(3, (int) Abilities.v(p, 2, "radius", 15));
+        int R = Math.max(12, (int) Abilities.v(p, 2, "radius", 30));
         int dur = Abilities.ticks(p, Abilities.v(p, 2, "seconds", 60));
-        int perTick = Math.max(500, (int) Abilities.v(p, 2, "blocks-per-tick", 10000));
+        int perTick = Math.max(200, (int) Abilities.v(p, 2, "blocks-per-tick", 1500));
         boolean restore = pl.getConfig().getBoolean(Abilities.path(p, 2, "restore"), true);
-        int interval = Math.max(5, (int) Abilities.v(p, 2, "beam-interval-ticks", 20));
+        int interval = Math.max(5, (int) Abilities.v(p, 2, "beam-interval-ticks", 40));
         int beams = (int) Abilities.v(p, 2, "beams-per-interval", 3);
         double beamDmg = Abilities.v(p, 2, "beam-damage", 6.0);
-        double beamRange = Abilities.v(p, 2, "beam-range", 25);
+        double beamRange = Abilities.v(p, 2, "beam-range", 45);
         double aim = Abilities.v(p, 2, "aim-at-enemies-chance", 0.5);
         List<String> darkness = Abilities.list(p, 2, "effects");
-
-        List<Material> surface = new ArrayList<>();
-        for (String s : Abilities.list(p, 2, "surface-materials")) { Material m = Material.matchMaterial(s); if (m != null) surface.add(m); }
-        if (surface.isEmpty()) surface.add(Material.SCULK);
         Set<String> protectedMats = new HashSet<>(Abilities.list(p, 2, "protected-materials"));
-        double t1 = Abilities.v(p, 2, "vein-chance", 0.35);
-        double t2 = t1 + Abilities.v(p, 2, "sensor-chance", 0.03);
-        double t3 = t2 + Abilities.v(p, 2, "calibrated-chance", 0.015);
-        double t4 = t3 + Abilities.v(p, 2, "shrieker-chance", 0.01);
-        double t5 = t4 + Abilities.v(p, 2, "catalyst-chance", 0.015);
+
+        // the portal sits a few blocks in front of you, so you stand on the plaza facing it
+        World w = p.getWorld();
+        Location cl = p.getLocation();
+        BlockFace face = p.getFacing();
+        int offset = (int) Abilities.v(p, 2, "center-offset", 5);
+        int px = cl.getBlockX() + face.getModX() * offset, pz = cl.getBlockZ() + face.getModZ() * offset;
+        int py = cl.getBlockY() - 1;
+        for (int y = cl.getBlockY() - 1; y >= cl.getBlockY() - 6; y--) {
+            Material m = w.getBlockAt(cl.getBlockX(), y, cl.getBlockZ()).getType();
+            if (m.isSolid()) { py = y; break; }
+        }
+
+        AncientCity.Opts opts = new AncientCity.Opts(
+                Abilities.v(p, 2, "ruin-amount", 1.0), Abilities.v(p, 2, "building-density", 1.0), protectedMats,
+                (int) Abilities.v(p, 2, "portal-inner-width", 3), (int) Abilities.v(p, 2, "portal-inner-height", 5),
+                Abilities.v(p, 2, "vein-chance", 0.35), Abilities.v(p, 2, "sensor-chance", 0.03),
+                Abilities.v(p, 2, "calibrated-chance", 0.015), Abilities.v(p, 2, "shrieker-chance", 0.01),
+                Abilities.v(p, 2, "catalyst-chance", 0.015));
+        AncientCity city = AncientCity.plan(w, px, pz, py, R, face, new Random(System.nanoTime() ^ pl.getName().hashCode()), opts);
 
         UUID id = p.getUniqueId();
-        Location c = p.getLocation().getBlock().getLocation();
-        World w = c.getWorld();
-        Location center = c.clone().add(0.5, 0.5, 0.5);
-        int cx = c.getBlockX(), cy = c.getBlockY(), cz = c.getBlockZ();
-        int size = 2 * R + 1;
-        long total = (long) size * size * size;
-
+        Location center = new Location(w, px + 0.5, py + 1.5, pz + 0.5);
         List<BlockState> saved = new ArrayList<>();
         boolean[] restored = {false};
         BukkitTask[] builder = new BukkitTask[1];
+        Iterator<Map.Entry<AncientCity.Pos, BlockData>> it = city.blocks.entrySet().iterator();
 
-        // ---- build the deep dark (batched over ticks)
+        // ---- raise the city (batched over ticks)
         builder[0] = new BukkitRunnable() {
-            long idx = 0;
             @Override public void run() {
-                ThreadLocalRandom rnd = ThreadLocalRandom.current();
-                int steps = 0;
-                while (idx < total && steps++ < perTick) {
-                    long i = idx++;
-                    int x = (int) (i % size) - R, y = (int) ((i / size) % size) - R, z = (int) (i / ((long) size * size)) - R;
-                    if ((double) x * x + (double) y * y + (double) z * z > (double) R * R) continue;
-                    int by = cy + y;
-                    if (by < w.getMinHeight() || by >= w.getMaxHeight()) continue;
-                    Block b = w.getBlockAt(cx + x, by, cz + z);
-                    Material m = b.getType();
-                    if (m.isAir()) {
-                        Block below = b.getRelative(BlockFace.DOWN);
-                        if (!below.getType().isSolid()) continue;
-                        double r = rnd.nextDouble();
-                        Material dm;
-                        if (r < t1) dm = Material.SCULK_VEIN;
-                        else if (r < t2) dm = Material.SCULK_SENSOR;
-                        else if (r < t3) dm = Material.CALIBRATED_SCULK_SENSOR;
-                        else if (r < t4) dm = Material.SCULK_SHRIEKER;
-                        else if (r < t5) dm = Material.SCULK_CATALYST;
-                        else continue;
-                        BlockData bd = dm.createBlockData();
-                        if (bd instanceof MultipleFacing mf) mf.setFace(BlockFace.DOWN, true);
-                        if (bd instanceof SculkShrieker ss) ss.setCanSummon(false);   // decoration only - never summons a Warden
-                        saved.add(b.getState());
-                        b.setBlockData(bd, false);
-                    } else if (m.isSolid() && m.getHardness() >= 0 && !m.name().startsWith("SCULK") && !protectedMats.contains(m.name())) {
-                        boolean exposed = false;
-                        for (BlockFace f : FACES) if (b.getRelative(f).isPassable()) { exposed = true; break; }
-                        if (!exposed || b.getState(false) instanceof TileState) continue;
-                        saved.add(b.getState());
-                        b.setType(surface.get(rnd.nextInt(surface.size())), false);
-                    }
+                int n = 0;
+                while (it.hasNext() && n++ < perTick) {
+                    Map.Entry<AncientCity.Pos, BlockData> en = it.next();
+                    AncientCity.Pos pos = en.getKey();
+                    if (pos.y() < w.getMinHeight() || pos.y() >= w.getMaxHeight()) continue;
+                    Block b = w.getBlockAt(pos.x(), pos.y(), pos.z());
+                    Material cur = b.getType();
+                    Material want = en.getValue().getMaterial();
+                    if (cur == want && want == Material.AIR) continue;
+                    if (!cur.isAir() && (cur.getHardness() < 0 || protectedMats.contains(cur.name()) || b.getState(false) instanceof TileState)) continue;
+                    saved.add(b.getState());
+                    b.setBlockData(en.getValue(), false);
                 }
-                if (idx >= total) cancel();
+                if (!it.hasNext()) cancel();
             }
         }.runTaskTimer(pl, 0, 1);
 
@@ -157,7 +141,7 @@ final class Domain {
         ThreadLocalRandom rnd = ThreadLocalRandom.current();
         World w = center.getWorld();
         double ang = rnd.nextDouble() * Math.PI * 2, rr = R * (0.3 + 0.6 * rnd.nextDouble());
-        Location origin = center.clone().add(Math.cos(ang) * rr, 2 + rnd.nextDouble() * Math.max(2, R * 0.6), Math.sin(ang) * rr);
+        Location origin = center.clone().add(Math.cos(ang) * rr, 2 + rnd.nextDouble() * Math.min(12, Math.max(2, R * 0.6)), Math.sin(ang) * rr);
 
         Location aimAt = null;
         if (rnd.nextDouble() < aim) {

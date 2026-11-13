@@ -15,6 +15,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageModifier;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
@@ -59,6 +60,12 @@ public final class CombatListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void finalizeDamage(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof LivingEntity v)) return;
+        // Penetration (spear): ignore a % of armor per level
+        if (e instanceof EntityDamageByEntityEvent ee && ee.getDamager() instanceof Player pa && e.isApplicable(DamageModifier.ARMOR)) {
+            int pen = CE.level(pa.getInventory().getItemInMainHand(), "penetration");
+            if (pen > 0) e.setDamage(DamageModifier.ARMOR, e.getDamage(DamageModifier.ARMOR)
+                    * (1 - Math.min(1.0, pen * CustomEnchantListener.cfgD("penetration.percent-per-level", 0.10))));
+        }
         if (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true) && e.isApplicable(DamageModifier.ARMOR)) {
             double base = e.getDamage(DamageModifier.BASE)
                     + (e.isApplicable(DamageModifier.HARD_HAT) ? e.getDamage(DamageModifier.HARD_HAT) : 0)
@@ -75,6 +82,9 @@ public final class CombatListener implements Listener {
                 if (f > max) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) - (f - max));
             }
         }
+        // Immortal (armor enchant): survive a killing blow
+        if (v instanceof Player ip && e.getCause() != EntityDamageEvent.DamageCause.VOID
+                && ip.getHealth() - e.getFinalDamage() <= 0 && CustomEnchantListener.tryImmortal(ip)) e.setCancelled(true);
     }
 
     // ------------------------------------------------------------------ melee
@@ -137,6 +147,7 @@ public final class CombatListener implements Listener {
                 }
             }
         }
+        if (!trusted) dmg = CustomEnchantListener.melee(att, vic, strong, dmg);
         e.setDamage(dmg);
         shieldLogic(att, vic);
     }
@@ -180,7 +191,7 @@ public final class CombatListener implements Listener {
         return total;
     }
 
-    private boolean isCrit(Player p) {
+    static boolean isCrit(Player p) {
         return p.getFallDistance() > 0 && !p.isOnGround() && !p.isClimbing() && !p.isInWater()
                 && !p.isSprinting() && !p.hasPotionEffect(PotionEffectType.BLINDNESS) && p.getVehicle() == null;
     }

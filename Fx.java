@@ -520,7 +520,7 @@ final class Fx {
     static void domainAmbient(Location c, int R) {
         if (!on()) return;
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        for (int i = 0; i < n(18); i++) {
+        for (int i = 0; i < n(40); i++) {
             Vector v = new Vector(r.nextGaussian(), r.nextGaussian(), r.nextGaussian());
             if (v.lengthSquared() < 1e-6) continue;
             v.normalize().multiply(R * Math.cbrt(r.nextDouble()));

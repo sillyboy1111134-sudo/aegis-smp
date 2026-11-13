@@ -34,6 +34,8 @@ public final class Aegis extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new CombatListener(), this);
         getServer().getPluginManager().registerEvents(new UtilityListener(), this);
+        getServer().getPluginManager().registerEvents(new CustomEnchantListener(), this);
+        Soulbound.load();
 
         Commands c = new Commands();
         for (String n : new String[]{"ability", "trust", "aegis", "myclass"}) {
@@ -50,6 +52,7 @@ public final class Aegis extends JavaPlugin {
         Abilities.shutdown();
         for (Player p : Bukkit.getOnlinePlayers()) Status.clearMods(p);
         saveData();
+        Soulbound.save();
     }
 
     public PlayerData pd(UUID id) {

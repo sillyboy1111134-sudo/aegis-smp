@@ -52,6 +52,13 @@ final class Passives {
         return null;
     }
 
+    static void shuffleHotbar(Player v) {
+        java.util.List<ItemStack> items = new ArrayList<>();
+        for (int i = 0; i < 9; i++) items.add(v.getInventory().getItem(i));
+        java.util.Collections.shuffle(items);
+        for (int i = 0; i < 9; i++) v.getInventory().setItem(i, items.get(i));
+    }
+
     static boolean roll(double percent) {
         return ThreadLocalRandom.current().nextDouble() * 100.0 < percent;
     }
@@ -101,16 +108,7 @@ final class Passives {
             case "ignite" -> target.setFireTicks((int) (n.getDouble("seconds", 5) * 20));
             case "enchain" -> Status.set(Status.enchain, target, n.getDouble("seconds", 2));
             case "stun" -> Status.stun(target, n.getDouble("seconds", 1.5));
-            case "shuffle" -> {
-                if (target instanceof Player v) {
-                    ThreadLocalRandom r = ThreadLocalRandom.current();
-                    int a = r.nextInt(9), b = r.nextInt(9);
-                    if (a == b) b = (b + 1 + r.nextInt(8)) % 9;
-                    ItemStack ia = v.getInventory().getItem(a), ib = v.getInventory().getItem(b);
-                    v.getInventory().setItem(a, ib);
-                    v.getInventory().setItem(b, ia);
-                }
-            }
+            case "shuffle" -> { if (target instanceof Player v) shuffleHotbar(v); }   // reshuffles the whole hotbar
             default -> { }
         }
         Fx.proc(target, n);

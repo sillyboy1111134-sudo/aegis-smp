@@ -49,6 +49,7 @@ public final class UtilityListener implements Listener {
         Bukkit.getScheduler().runTaskLater(pl, () -> {
             if (!p.isOnline()) return;
             Passives.refresh(p);
+            Soulbound.restore(p);
             if (d.type == null && pl.getConfig().getBoolean("general.assign-class-on-first-join", true))
                 Roll.start(p, pl.randomClass(null));
         }, 20L);
@@ -68,6 +69,7 @@ public final class UtilityListener implements Listener {
         Player p = e.getEntity();
         PlayerData d = pl.pd(p);
         e.getDrops().removeIf(Items::isTemp);
+        Soulbound.onDeath(e);
         if (d.savedOffhand != null) { e.getDrops().add(d.savedOffhand); d.savedOffhand = null; }
         Status.dual.remove(p.getUniqueId());
         Abilities.cleanup(p);
@@ -118,6 +120,7 @@ public final class UtilityListener implements Listener {
     public void onRespawn(PlayerRespawnEvent e) {
         Player p = e.getPlayer();
         Bukkit.getScheduler().runTaskLater(pl, () -> Passives.refresh(p), 2L);
+        Soulbound.restoreLater(p);
     }
 
     // ------------------------------------------------------------------ ability input
@@ -284,6 +287,7 @@ public final class UtilityListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onBreak(BlockBreakEvent e) {
+        if (CustomEnchantListener.nested) return;
         Player p = e.getPlayer();
         Block b = e.getBlock();
         if (frozen(p) || stunned(p)) { e.setCancelled(true); return; }
@@ -433,6 +437,13 @@ public final class UtilityListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onItemDamage(PlayerItemDamageEvent e) {
         Player p = e.getPlayer();
+        // Indomitable: armor loses less durability
+        if (CE.level(e.getItem(), "indomitable") > 0 && Gear.isArmor(e.getItem().getType())) {
+            double x = e.getDamage() * (1 - CustomEnchantListener.cfgD("indomitable.reduction", 0.05));
+            int base = (int) x;
+            if (new Random().nextDouble() < x - base) base++;
+            e.setDamage(base);
+        }
         Material m = e.getItem().getType();
         for (String id : Passives.unlocked(p)) {
             ConfigurationSection n = Passives.node(p, id);

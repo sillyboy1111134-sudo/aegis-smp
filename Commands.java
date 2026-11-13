@@ -9,6 +9,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -96,7 +97,7 @@ final class Commands implements CommandExecutor, TabCompleter {
     // ------------------------------------------------------------------ /aegis (admin)
     private boolean admin(CommandSender s, String[] a) {
         if (!s.hasPermission("aegis.admin")) { say(s, "No permission.", NamedTextColor.RED); return true; }
-        if (a.length == 0) { say(s, "/aegis <give|setclass|setenergy|reload>", NamedTextColor.RED); return true; }
+        if (a.length == 0) { say(s, "/aegis <give|setclass|setenergy|enchant|reload>", NamedTextColor.RED); return true; }
         switch (a[0].toLowerCase()) {
             case "reload" -> { pl.reloadConfig(); Recipes.register(); say(s, "Config reloaded.", NamedTextColor.GREEN); }
             case "give" -> {
@@ -129,7 +130,18 @@ final class Commands implements CommandExecutor, TabCompleter {
                 Passives.refresh(t);
                 say(s, t.getName() + " energy = " + pl.pd(t).energy, NamedTextColor.GREEN);
             }
-            default -> say(s, "/aegis <give|setclass|setenergy|reload>", NamedTextColor.RED);
+            case "enchant" -> {
+                if (!(s instanceof Player p)) { say(s, "Players only.", NamedTextColor.RED); return true; }
+                if (a.length < 2) { say(s, "/aegis enchant <id> [level]", NamedTextColor.RED); return true; }
+                ItemStack it = p.getInventory().getItemInMainHand();
+                CE.Def d = CE.def(a[1]);
+                if (d == null) { say(s, "Unknown enchant. Use tab-complete for the ids.", NamedTextColor.RED); return true; }
+                if (it.getType().isAir() || !CE.fits(d, it.getType())) { say(s, "Hold a matching item.", NamedTextColor.RED); return true; }
+                int lvl = a.length > 2 ? Math.max(1, Integer.parseInt(a[2])) : 1;
+                if (CE.add(it, d.id(), lvl)) { p.getInventory().setItemInMainHand(it); say(s, "Added " + CE.name(d) + ".", NamedTextColor.GREEN); }
+                else say(s, "That item already has " + CE.maxPerItem() + " custom enchants.", NamedTextColor.RED);
+            }
+            default -> say(s, "/aegis <give|setclass|setenergy|enchant|reload>", NamedTextColor.RED);
         }
         return true;
     }
@@ -144,8 +156,8 @@ final class Commands implements CommandExecutor, TabCompleter {
             if (a.length == 1) out.addAll(List.of("add", "remove", "list"));
             else if (a.length == 2) Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
         } else if (name.equals("aegis")) {
-            if (a.length == 1) out.addAll(List.of("give", "setclass", "setenergy", "reload"));
-            else if (a.length == 2) Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
+            if (a.length == 1) out.addAll(List.of("give", "setclass", "setenergy", "enchant", "reload"));
+            else if (a.length == 2) { if (a[0].equalsIgnoreCase("enchant")) CE.DEFS.forEach(d -> out.add(d.id())); else Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName())); }
             else if (a.length == 3 && a[0].equalsIgnoreCase("give")) out.addAll(List.of("marble", "reroller"));
             else if (a.length == 3 && a[0].equalsIgnoreCase("setclass")) for (ClassType t : ClassType.values()) out.add(t.id);
         }

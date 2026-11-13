@@ -14,7 +14,6 @@ import org.bukkit.entity.*;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
-import org.bukkit.inventory.meta.BundleMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -857,13 +856,9 @@ final class Abilities {
         ItemStack hand = p.getInventory().getItemInMainHand();
         if (hand.getType().isAir()) { msg(p, "Hold the item you want to duplicate."); return false; }
         if (Tag.SHULKER_BOXES.isTagged(hand.getType())) { msg(p, "Shulker boxes can't be duplicated."); return false; }
-        if (hand.getItemMeta() instanceof BundleMeta bm && bm.getItems().stream().anyMatch(i -> Tag.SHULKER_BOXES.isTagged(i.getType()))) {
-            msg(p, "That bundle holds a shulker box and can't be duplicated."); return false;
-        }
-        if (list(p, 1, "blocked-materials").contains(hand.getType().name())) { msg(p, "That item can't be duplicated."); return false; }
-        if (!cfg().getBoolean(path(p, 1, "allow-plugin-items"), false) && (Items.kind(hand) != null || Items.isTemp(hand))) {
-            msg(p, "That item can't be duplicated."); return false;
-        }
+        if (hand.getType().name().endsWith("BUNDLE")) { msg(p, "Bundles can't be duplicated."); return false; }
+        if (Items.kind(hand) != null) { msg(p, "Energy Marbles and Class Rerollers can't be duplicated."); return false; }
+        if (Items.isTemp(hand) || list(p, 1, "blocked-materials").contains(hand.getType().name())) { msg(p, "That item can't be duplicated."); return false; }
         int copies = Math.max(1, (int) v(p, 1, "copies", 1));
         boolean whole = cfg().getBoolean(path(p, 1, "whole-stack"), true);
         for (int i = 0; i < copies; i++) {

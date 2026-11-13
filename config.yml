@@ -74,6 +74,39 @@ recipes:
     shape: ["EGE", "GNG", "EGE"]
     ingredients: {E: EMERALD_BLOCK, G: GOLD_BLOCK, N: NETHER_STAR}
 
+# ============================================================
+#  CUSTOM ENCHANTS - only obtainable from enchanting tables, max-per-item per piece of gear.
+#  Admins can test with /aegis enchant <id> [level].
+#  Per-enchant keys: enabled, name, max-level, plus the numbers listed.
+# ============================================================
+custom-enchants:
+  max-per-item: 2
+  table:
+    base-chance: 10            # % chance of a custom enchant = base + chance-per-level * (enchanting level cost)
+    chance-per-level: 2.0
+    max-chance: 85
+    second-roll-multiplier: 0.4   # the 2nd custom enchant uses this x the chance
+  bleed: {enabled: true, name: "Bleed", max-level: 3, chance-per-level: 3, seconds: 5}
+  reel: {enabled: true, name: "Reel", max-level: 3, pull-per-level: 1.0}
+  might: {enabled: true, name: "Might", max-level: 5, per-level: 0.25}          # same scaling as Power: +25% x (level+1)
+  tri_shot: {enabled: true, name: "Tri Shot", max-level: 1, angle: 10}
+  grapple: {enabled: true, name: "Grapple", max-level: 1, strength: 3.0, cooldown: 30}
+  timber: {enabled: true, name: "Timber", max-level: 1, max-blocks: 256}
+  vein_miner: {enabled: true, name: "Vein Miner", max-level: 1, max-blocks: 64, require-sneak: false}
+  executioner: {enabled: true, name: "Executioner", max-level: 3, chance-per-level: 10}
+  soulbound: {enabled: true, name: "Soulbound", max-level: 1}
+  lifeleach: {enabled: true, name: "Lifeleach", max-level: 5, percent-per-level: 0.10}
+  excavation: {enabled: true, name: "Excavation", max-level: 4}                 # 1 = 1x2, 2 = plus, 3 = 3x3, 4 = 5x5. Shift+right-click to toggle
+  ember: {enabled: true, name: "Ember", max-level: 1, fire-ticks: 1200}
+  charge: {enabled: true, name: "Charge", max-level: 3, blocks-per-level: 5, speed: 1.5, hunger-cost: 10, cooldown: 30, damage-base: 8, damage-per-level: 4}
+  penetration: {enabled: true, name: "Penetration", max-level: 4, percent-per-level: 0.10}
+  heavy_blow: {enabled: true, name: "Heavy Blow", max-level: 1, chance: 3, stun-seconds: 1.5}
+  indomitable: {enabled: true, name: "Indomitable", max-level: 1, reduction: 0.05}
+  unmovable: {enabled: true, name: "Unmovable", max-level: 1, per-piece: 0.10}
+  immortal: {enabled: true, name: "Immortal", max-level: 1, durability-cost: 150, cooldown: 1800, revive-health: 1.0}
+  double_attack: {enabled: true, name: "Double Attack", max-level: 1, chance: 1, multiplier: 2.0}
+  reshuffle: {enabled: true, name: "Reshuffle", max-level: 1, chance: 0.25}
+
 classes:
   # ---------------------------------------------------------------- SHACKLED
   shackled:
@@ -279,26 +312,30 @@ classes:
       health-multiplier: 0.5     # pet has half a Warden's health
       damage-multiplier: 0.25    # and deals a quarter of its damage
       follow-teleport-distance: 20
-    a2:                      # Warden's Domain: sculk-corrupted area, darkness for enemies, warden beams
+    a2:                      # Warden's Domain: an Ancient City rises around an inactive portal
       armor-damage: 0
       armor-repair: 0
       cooldown: 120
       seconds: 60
-      radius: 15
+      radius: 30                 # size of the domain (doubled)
+      center-offset: 5           # the portal is built this many blocks in front of you
+      portal-inner-width: 3      # reinforced-deepslate portal frame (inner size, the frame adds 2)
+      portal-inner-height: 5
+      building-density: 1.0      # 0 = no buildings, 2 = very crowded
+      ruin-amount: 1.0           # 0 = pristine city, 2 = mostly rubble
       effects: ["darkness:1:6"]
-      beam-interval-ticks: 20
+      beam-interval-ticks: 40    # warden beams (doubled: half as often)
       beams-per-interval: 3
       beam-damage: 6.0           # HP (3 hearts), ignores armor
-      beam-range: 25
+      beam-range: 45
       aim-at-enemies-chance: 0.5
-      blocks-per-tick: 10000
-      restore: true              # false = the corruption stays forever
-      surface-materials: [SCULK, SCULK, SCULK, SCULK, SCULK, DEEPSLATE, DEEPSLATE, COBBLED_DEEPSLATE, DEEPSLATE_BRICKS]
-      vein-chance: 0.35          # decoration chances on top of the corrupted ground
+      blocks-per-tick: 1500      # lower = less lag while the city is built
+      restore: true              # false = the city stays forever
+      vein-chance: 0.35          # sculk decoration on the ground
       sensor-chance: 0.03
       calibrated-chance: 0.015
       shrieker-chance: 0.01      # decorative only - never summons a Warden
-      catalyst-chance: 0.015
+      catalyst-chance: 0.015     # extra catalysts are added near the portal
       protected-materials: [BEDROCK, REINFORCED_DEEPSLATE, END_PORTAL_FRAME]
     passives:
       wardens: {ignored-by: [WARDEN]}
@@ -312,13 +349,12 @@ classes:
 
   # ---------------------------------------------------------------- MIDAS
   midas:
-    a1:                      # Golden Touch: duplicates the item in your hand (never shulker boxes)
+    a1:                      # Golden Touch: duplicates the item in your hand (never shulker boxes, bundles, Energy Marbles or Rerollers)
       armor-damage: 0
       armor-repair: 0
       cooldown: 1800         # 30 minutes
       copies: 1
       whole-stack: true      # false = copies a single item
-      allow-plugin-items: false   # Energy Marbles / Rerollers can't be duplicated
       blocked-materials: []
     a2:                      # Bounty: mob drops multiplied
       armor-damage: 0

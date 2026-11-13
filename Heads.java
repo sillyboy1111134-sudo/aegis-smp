@@ -9,6 +9,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
@@ -38,6 +39,14 @@ final class Heads {
             m.setPlayerProfile(pr);
         }
         m.displayName(Component.text(pretty + " Head", NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
+        it.setItemMeta(m);
+        return it;
+    }
+
+    static ItemStack playerHead(Player v) {
+        ItemStack it = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta m = (SkullMeta) it.getItemMeta();
+        m.setOwningPlayer(v);
         it.setItemMeta(m);
         return it;
     }

@@ -29,7 +29,10 @@ final class Tasks {
         // netherite <-> diamond rule, trident upgrades
         new BukkitRunnable() {
             @Override public void run() {
-                for (Player p : Bukkit.getOnlinePlayers()) if (!pl.pd(p).rolling) Gear.scan(p);
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    if (!pl.pd(p).rolling) Gear.scan(p);
+                    CustomEnchantListener.refreshArmor(p);
+                }
             }
         }.runTaskTimer(pl, 20, Math.max(1, pl.getConfig().getInt("gear.scan-ticks", 10)));
 
