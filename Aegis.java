@@ -38,7 +38,7 @@ public final class Aegis extends JavaPlugin {
         Soulbound.load();
 
         Commands c = new Commands();
-        for (String n : new String[]{"ability", "trust", "aegis", "myclass"}) {
+        for (String n : new String[]{"ability", "trust", "aegis", "myclass", "enchant", "cenchant"}) {
             PluginCommand cmd = getCommand(n);
             if (cmd != null) { cmd.setExecutor(c); cmd.setTabCompleter(c); }
         }

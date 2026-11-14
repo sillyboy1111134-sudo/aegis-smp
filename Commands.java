@@ -4,6 +4,8 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Registry;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -26,6 +28,8 @@ final class Commands implements CommandExecutor, TabCompleter {
             case "trust": return trust(s, a);
             case "aegis": return admin(s, a);
             case "myclass": return myclass(s);
+            case "enchant": return enchant(s, label, a, true);
+            case "cenchant": return enchant(s, label, a, false);
             default: return false;
         }
     }
@@ -94,6 +98,64 @@ final class Commands implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    // ------------------------------------------------------------------ /enchant, /cenchant
+    // /enchant [player] <id> [level]  - custom enchants; anything else is passed to the vanilla /enchant.
+    // /cenchant (alias /ce) does the same but never touches vanilla.
+    private boolean enchant(CommandSender s, String label, String[] a, boolean vanillaFallback) {
+        if (!s.hasPermission("aegis.admin")) {
+            if (vanillaFallback) return vanilla(s, a);
+            say(s, "No permission.", NamedTextColor.RED);
+            return true;
+        }
+        int idIdx = -1;
+        if (a.length >= 1 && CE.def(a[0]) != null) idIdx = 0;
+        else if (a.length >= 2 && CE.def(a[1]) != null) idIdx = 1;
+        if (idIdx < 0) {
+            if (vanillaFallback && a.length > 0) return vanilla(s, a);
+            StringBuilder ids = new StringBuilder();
+            for (CE.Def d : CE.DEFS) ids.append(ids.length() == 0 ? "" : ", ").append(d.id());
+            say(s, "/" + label + " [player] <id> [level]", NamedTextColor.RED);
+            say(s, "Custom enchants: " + ids, NamedTextColor.GRAY);
+            return true;
+        }
+        Player t;
+        if (idIdx == 1) {
+            t = Bukkit.getPlayerExact(a[0]);
+            if (t == null) { say(s, "Player not online.", NamedTextColor.RED); return true; }
+        } else if (s instanceof Player p) {
+            t = p;
+        } else {
+            say(s, "From console use: /" + label + " <player> <id> [level]", NamedTextColor.RED);
+            return true;
+        }
+        CE.Def d = CE.def(a[idIdx]);
+        ItemStack it = t.getInventory().getItemInMainHand();
+        if (it.getType().isAir() || !CE.fits(d, it.getType())) {
+            say(s, (t.equals(s) ? "Hold" : t.getName() + " must hold") + " an item that " + CE.name(d) + " fits (" + d.types()[0].name().toLowerCase() + ").", NamedTextColor.RED);
+            return true;
+        }
+        int lvl = 1;
+        if (a.length > idIdx + 1) {
+            try { lvl = Math.max(1, Integer.parseInt(a[idIdx + 1])); }
+            catch (NumberFormatException ex) { say(s, "Level must be a number.", NamedTextColor.RED); return true; }
+        }
+        CE.put(it, d.id(), lvl);
+        t.getInventory().setItemInMainHand(it);
+        int got = Math.min(lvl, CE.max(d));
+        say(s, "Added " + CE.name(d) + (CE.max(d) > 1 ? " " + CE.roman(got) : "") + (t.equals(s) ? "." : " to " + t.getName() + "'s item."), NamedTextColor.GREEN);
+        return true;
+    }
+
+    private boolean vanilla(CommandSender s, String[] a) {
+        Bukkit.dispatchCommand(s, "minecraft:enchant " + String.join(" ", a));
+        return true;
+    }
+
+    private void levels(List<String> out, String id) {
+        CE.Def d = CE.def(id);
+        if (d != null) for (int i = 1; i <= CE.max(d); i++) out.add(String.valueOf(i));
+    }
+
     // ------------------------------------------------------------------ /aegis (admin)
     private boolean admin(CommandSender s, String[] a) {
         if (!s.hasPermission("aegis.admin")) { say(s, "No permission.", NamedTextColor.RED); return true; }
@@ -138,8 +200,9 @@ final class Commands implements CommandExecutor, TabCompleter {
                 if (d == null) { say(s, "Unknown enchant. Use tab-complete for the ids.", NamedTextColor.RED); return true; }
                 if (it.getType().isAir() || !CE.fits(d, it.getType())) { say(s, "Hold a matching item.", NamedTextColor.RED); return true; }
                 int lvl = a.length > 2 ? Math.max(1, Integer.parseInt(a[2])) : 1;
-                if (CE.add(it, d.id(), lvl)) { p.getInventory().setItemInMainHand(it); say(s, "Added " + CE.name(d) + ".", NamedTextColor.GREEN); }
-                else say(s, "That item already has " + CE.maxPerItem() + " custom enchants.", NamedTextColor.RED);
+                CE.put(it, d.id(), lvl);
+                p.getInventory().setItemInMainHand(it);
+                say(s, "Added " + CE.name(d) + ".", NamedTextColor.GREEN);
             }
             default -> say(s, "/aegis <give|setclass|setenergy|enchant|reload>", NamedTextColor.RED);
         }
@@ -155,6 +218,20 @@ final class Commands implements CommandExecutor, TabCompleter {
         else if (name.equals("trust")) {
             if (a.length == 1) out.addAll(List.of("add", "remove", "list"));
             else if (a.length == 2) Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
+        } else if (name.equals("enchant") || name.equals("cenchant")) {
+            if (!s.hasPermission("aegis.admin")) return out;
+            boolean vanillaToo = name.equals("enchant");
+            if (a.length == 1) {
+                CE.DEFS.forEach(d -> out.add(d.id()));
+                Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
+                if (vanillaToo) { out.add("@s"); out.add("@a"); out.add("@p"); }
+            } else if (a.length == 2) {
+                if (CE.def(a[0]) != null) levels(out, a[0]);
+                else {
+                    CE.DEFS.forEach(d -> out.add(d.id()));
+                    if (vanillaToo) for (Enchantment en : Registry.ENCHANTMENT) out.add(en.getKey().getKey());
+                }
+            } else if (a.length == 3 && CE.def(a[1]) != null) levels(out, a[1]);
         } else if (name.equals("aegis")) {
             if (a.length == 1) out.addAll(List.of("give", "setclass", "setenergy", "enchant", "reload"));
             else if (a.length == 2) { if (a[0].equalsIgnoreCase("enchant")) CE.DEFS.forEach(d -> out.add(d.id())); else Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName())); }

@@ -76,7 +76,8 @@ recipes:
 
 # ============================================================
 #  CUSTOM ENCHANTS - only obtainable from enchanting tables, max-per-item per piece of gear.
-#  Admins can test with /aegis enchant <id> [level].
+#  Admins (aegis.admin / op) can apply them with /enchant [player] <id> [level], /cenchant or /aegis enchant -
+#  these ignore max-per-item. /enchant falls back to the vanilla command for non-custom enchants.
 #  Per-enchant keys: enabled, name, max-level, plus the numbers listed.
 # ============================================================
 custom-enchants:

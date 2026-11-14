@@ -136,6 +136,16 @@ final class CE {
         return true;
     }
 
+    /** Admin version of add(): ignores the per-item cap (still clamps the level to the enchant's max). */
+    static boolean put(ItemStack s, String id, int level) {
+        Def d = def(id);
+        if (d == null) return false;
+        Map<String, Integer> m = read(s);
+        m.put(d.id(), Math.max(1, Math.min(max(d), level)));
+        write(s, m);
+        return true;
+    }
+
     static void strip(ItemStack s) { write(s, new LinkedHashMap<>()); }
 
     static String roman(int n) {
