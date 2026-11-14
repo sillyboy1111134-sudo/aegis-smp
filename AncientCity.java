@@ -71,7 +71,7 @@ final class AncientCity {
                 if ((double) (ix - R) * (ix - R) + (double) (iz - R) * (iz - R) <= (double) R * R) {
                     for (int y = py + 10; y >= py - 16; y--) {
                         Material m = w.getBlockAt(x, y, z).getType();
-                        if (m.isAir() || Tag.LEAVES.isTagged(m) || Tag.LOGS.isTagged(m) || (m.isPassable() && !liquid(m))) continue;
+                        if (m.isAir() || Tag.LEAVES.isTagged(m) || Tag.LOGS.isTagged(m) || (w.getBlockAt(x, y, z).isPassable() && !liquid(m))) continue;
                         found = liquid(m) ? NONE : y;
                         break;
                     }
@@ -371,7 +371,7 @@ final class AncientCity {
                 put(x, g, z, chance(pSculk) ? Material.SCULK : (chance(0.5) ? Material.DEEPSLATE : Material.COBBLED_DEEPSLATE));
 
                 Material above = w.getBlockAt(x, g + 1, z).getType();
-                if (!above.isAir() && above.isPassable() && !liquid(above)) { put(x, g + 1, z, Material.AIR); above = Material.AIR; }
+                if (!above.isAir() && w.getBlockAt(x, g + 1, z).isPassable() && !liquid(above)) { put(x, g + 1, z, Material.AIR); above = Material.AIR; }
                 if (!above.isAir()) continue;
 
                 double near = 1 + 3 * (1 - d / R);                    // catalysts cluster toward the centre
