@@ -35,6 +35,8 @@ public final class Aegis extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new CombatListener(), this);
         getServer().getPluginManager().registerEvents(new UtilityListener(), this);
         getServer().getPluginManager().registerEvents(new CustomEnchantListener(), this);
+        getServer().getPluginManager().registerEvents(new ExtraListener(), this);
+        MoreClasses.startTicker();
         Soulbound.load();
 
         Commands c = new Commands();

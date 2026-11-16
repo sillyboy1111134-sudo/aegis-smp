@@ -216,6 +216,12 @@ final class Abilities {
             case BOREUS -> n == 1 ? breezyDash(p) : overdrive(p);
             case AZAROTH -> n == 1 ? deepsCall(p) : Domain.start(p);
             case MIDAS -> n == 1 ? goldenTouch(p) : bounty(p);
+            case ROGUE -> n == 1 ? NewClasses.stealth(p) : NewClasses.shadowStep(p);
+            case YGGDRASIL -> n == 1 ? NewClasses.vitality(p) : NewClasses.worldTreeRoot(p);
+            case JACKPOT -> n == 1 ? MoreClasses.luckDraw(p) : MoreClasses.highRoller(p);
+            case FATEWEAVER -> n == 1 ? MoreClasses.weaveOfFate(p) : MoreClasses.webWeave(p);
+            case SINGULARITY -> n == 1 ? MoreClasses.starfall(p) : MoreClasses.blackhole(p);
+            case SPARTAN -> n == 1 ? MoreClasses.steed(p) : MoreClasses.spartanCharge(p);
         };
         if (ok) {
             d.startCd(n, v(p, n, "cooldown", 30));
@@ -888,9 +894,11 @@ final class Abilities {
         revertBoost(p);
         Status.overdrive.remove(u);
         applyWindburst(p, false);
+        NewClasses.cleanup(p);
     }
 
     static void shutdown() {
+        NewClasses.shutdown();
         for (Player p : Bukkit.getOnlinePlayers()) cleanup(p);
         for (Runnable r : new ArrayList<>(cleanups)) r.run();
         cleanups.clear();

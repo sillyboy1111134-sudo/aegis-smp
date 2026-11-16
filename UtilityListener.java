@@ -206,6 +206,7 @@ public final class UtilityListener implements Listener {
         Player p = e.getPlayer();
         Material m = e.getItem().getType();
         if ((frozen(p) || stunned(p)) && !stunAllowed(m)) { e.setCancelled(true); return; }
+        if (NewClasses.gapPenalty(p, m)) return;   // Yggdrasil right after Vitality Boost
         for (String id : Passives.unlocked(p)) {
             ConfigurationSection n = Passives.node(p, id);
             if (n == null || !n.getStringList("foods").contains(m.name())) continue;

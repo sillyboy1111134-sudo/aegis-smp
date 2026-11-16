@@ -200,6 +200,17 @@ final class Fx {
                     part(mid, Particle.SONIC_BOOM, 1, 0, 0, 0, 0);
                 }
             }
+            case ROGUE -> {
+                if (n == 1) burst(feet, Particle.POOF, 10, .05);
+                // Shadow Step (n == 2) has no particles on purpose - it is a trick
+            }
+            case YGGDRASIL -> {
+                if (n == 1) {
+                    burst(mid, Particle.HAPPY_VILLAGER, 40, .4);
+                    part(mid.clone().add(0, 1, 0), Particle.HEART, 12, .5, .4, .5, 0);
+                    expand(feet, .5, 4, 10, 28, l -> dust(l, 1, 0, 0x66BB6A, 1.5f));
+                }
+            }
             case MIDAS -> {
                 if (n == 1) {
                     burst(mid, Particle.WAX_ON, 40, .5);
@@ -608,6 +619,8 @@ final class Fx {
                 case BOREUS -> part(l, Particle.CLOUD, 1, 0, 0, 0, 0);
                 case AZAROTH -> { part(l, Particle.SCULK_SOUL, 1, 0, 0, 0, 0); if (i == 0) dust(l, 1, 0, 0x00ACC1, 1.2f); }
                 case MIDAS -> { dust(l, 1, 0, 0xFFD700, 1.2f); if (i == 0) part(l, Particle.WAX_ON, 1, 0, 0, 0, 0); }
+                case ROGUE -> { }   // no aura: a rogue should not give itself away
+                case YGGDRASIL -> { dust(l, 1, 0, 0x66BB6A, 1.1f); if (i == 0) part(l, Particle.HAPPY_VILLAGER, 1, 0, 0, 0, 0); }
             }
         }
     }

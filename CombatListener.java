@@ -47,7 +47,10 @@ public final class CombatListener implements Listener {
         if (Status.on(Status.immortal, v)) { e.setCancelled(true); return; }
         if (v instanceof Player p && e.getCause() == EntityDamageEvent.DamageCause.FALL) {
             ConfigurationSection n = Passives.first(p, "no-fall-damage");
-            if (n != null && n.getBoolean("no-fall-damage", false)) {
+            boolean spearOk = n == null || !n.getBoolean("requires-spear", false)
+                    || p.getInventory().getItemInMainHand().getType().name().endsWith("_SPEAR")
+                    || p.getInventory().getItemInOffHand().getType().name().endsWith("_SPEAR");
+            if (n != null && n.getBoolean("no-fall-damage", false) && spearOk) {
                 List<String> except = n.getStringList("fall-damage-on");
                 Block b = p.getLocation().getBlock();
                 boolean hurtByBlock = except.contains(b.getType().name()) || except.contains(b.getRelative(0, -1, 0).getType().name());
@@ -66,7 +69,8 @@ public final class CombatListener implements Listener {
             if (pen > 0) e.setDamage(DamageModifier.ARMOR, e.getDamage(DamageModifier.ARMOR)
                     * (1 - Math.min(1.0, pen * CustomEnchantListener.cfgD("penetration.percent-per-level", 0.10))));
         }
-        if (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true) && e.isApplicable(DamageModifier.ARMOR)) {
+        boolean allTrue = pl.getConfig().getBoolean("general.all-damage-true", true);
+        if ((allTrue || (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true))) && e.isApplicable(DamageModifier.ARMOR)) {
             double base = e.getDamage(DamageModifier.BASE)
                     + (e.isApplicable(DamageModifier.HARD_HAT) ? e.getDamage(DamageModifier.HARD_HAT) : 0)
                     + (e.isApplicable(DamageModifier.BLOCKING) ? e.getDamage(DamageModifier.BLOCKING) : 0);
@@ -75,6 +79,9 @@ public final class CombatListener implements Listener {
             if (r != null && e.isApplicable(DamageModifier.RESISTANCE))
                 e.setDamage(DamageModifier.RESISTANCE, -Math.min(1.0, 0.2 * (r.getAmplifier() + 1)) * base);
         }
+        // true damage: protection-type enchantments are ignored too (Resistance and absorption hearts still work)
+        if (allTrue && pl.getConfig().getBoolean("general.true-damage-ignores-enchants", true) && e.isApplicable(DamageModifier.MAGIC))
+            e.setDamage(DamageModifier.MAGIC, 0);
         if (v instanceof Player p) {
             ConfigurationSection n = Passives.first(p, "max-damage");
             if (n != null) {
@@ -121,6 +128,7 @@ public final class CombatListener implements Listener {
             Status.swift.remove(att.getUniqueId());
         }
         if (vic instanceof Player vp) victimSide(e, vp, att);
+        if (!trusted) dmg = MoreClasses.luckHit(att, dmg);   // Jackpot: Luck of the Draw / High Roller
 
         if (d.type != null && !trusted) {
             for (String pid : Passives.unlocked(att)) {
@@ -131,6 +139,22 @@ public final class CombatListener implements Listener {
                 if (n.contains("mace-min-fall")) dmg = maceSmash(att, vic, n, dmg);
 
                 if (!strong) continue;   // weak hits never trigger passives
+                if (n.contains("backstab-chance") && NewClasses.isBackstab(att, vic, n.getDouble("backstab-cone", 120)) && Passives.roll(n.getDouble("backstab-chance", 20))) {
+                    dmg *= n.getDouble("backstab-multiplier", 2.0);
+                    att.getWorld().playSound(vic.getLocation(), "entity.player.attack.crit", 1f, 0.8f);
+                }
+                if (n.contains("tp-behind-chance") && Passives.roll(n.getDouble("tp-behind-chance", 5))) NewClasses.tpBehind(att, vic);
+                // Jackpot
+                if (n.contains("shuffle-chance") && vic instanceof Player sv && Passives.roll(n.getDouble("shuffle-chance", 10))) MoreClasses.shuffleOne(sv);
+                if (n.contains("self-shuffle-chance") && Passives.roll(n.getDouble("self-shuffle-chance", 5))) MoreClasses.shuffleOne(att);
+                if (n.contains("hit-heal-chance") && Passives.roll(n.getDouble("hit-heal-chance", 5))) NewClasses.heal(att, n.getDouble("hit-heal-hp", 4));
+                if (n.contains("hit-hurt-chance") && Passives.roll(n.getDouble("hit-hurt-chance", 5))) {
+                    final double selfHurt = n.getDouble("hit-hurt-hp", 2);
+                    org.bukkit.Bukkit.getScheduler().runTask(pl, () -> { if (att.isOnline() && !att.isDead()) Abilities.hurtRaw(att, selfHurt); });
+                }
+                if (n.contains("sharp-min")) dmg = MoreClasses.rollSharp(att, n, dmg);
+                // Singularity
+                if (n.contains("low-hp-bonus") && vic.getHealth() < n.getDouble("hp-threshold", 12)) dmg *= n.getDouble("low-hp-bonus", 1.25);
                 if (n.contains("crit-in-water") && att.isInWater() && !isCrit(att)) dmg *= n.getDouble("crit-in-water", 1.5);
                 if (n.contains("burning-multiplier") && vic.getFireTicks() > 0) dmg *= n.getDouble("burning-multiplier", 1.1);
                 if (n.contains("combo-start")) dmg *= combo(att, vic, n);
@@ -162,14 +186,20 @@ public final class CombatListener implements Listener {
         double minFall = overdrive ? pl.getConfig().getDouble("classes.boreus.a2.overdrive-min-fall", 1.5) : n.getDouble("mace-min-fall", 5);
         if (fall < minFall) return dmg;
 
-        // vanilla smash bonus (4/block for 3 blocks, 2/block for the next 5, 1/block after) + Density (0.5 per level per block)
-        double bonus = Math.min(fall, 3) * 4 + Math.max(0, Math.min(fall, 8) - 3) * 2 + Math.max(0, fall - 8);
-        bonus += n.getDouble("mace-density", 2) * 0.5 * fall;
-        double total = dmg + bonus;
-        if (!overdrive) {
-            total = Math.min(n.getDouble("mace-max-damage", 8.0), total);   // 4 hearts
-            d.startKey("mace", n.getDouble("mace-cooldown", 10));
+        // flat damage: every smash does the same amount (default 10 HP = 5 hearts), no matter the fall distance.
+        // Set mace-flat-damage to 0 to go back to the old fall-scaled density-II formula.
+        double flat = n.getDouble("mace-flat-damage", 10.0);
+        double total;
+        if (flat > 0) {
+            total = flat;
+        } else {
+            // vanilla smash bonus (4/block for 3 blocks, 2/block for the next 5, 1/block after) + Density (0.5 per level per block)
+            double bonus = Math.min(fall, 3) * 4 + Math.max(0, Math.min(fall, 8) - 3) * 2 + Math.max(0, fall - 8);
+            bonus += n.getDouble("mace-density", 2) * 0.5 * fall;
+            total = dmg + bonus;
+            if (!overdrive) total = Math.min(n.getDouble("mace-max-damage", 8.0), total);   // 4 hearts
         }
+        if (!overdrive) d.startKey("mace", n.getDouble("mace-cooldown", 10));
 
         Fx.smash(vic.getLocation(), overdrive);
         att.getWorld().playSound(vic.getLocation(), "item.mace.smash_ground", 1f, 1f);

@@ -26,7 +26,7 @@ import org.bukkit.util.Vector;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-/** Azaroth - Warden's Domain: corrupts the area into a deep-dark biome, blinds enemies, fires warden beams. */
+/** Azaroth - Warden's Domain: corrupts the area into a deep-dark biome inside an obsidian dome, blinds enemies, fires warden beams. */
 final class Domain {
     private static final BlockFace[] FACES = {BlockFace.UP, BlockFace.DOWN, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
 
@@ -64,12 +64,39 @@ final class Domain {
                 Abilities.v(p, 2, "catalyst-chance", 0.015));
         AncientCity city = AncientCity.plan(w, px, pz, py, R, face, new Random(System.nanoTime() ^ pl.getName().hashCode()), opts);
 
+        // ---- obsidian dome sealing the whole domain (placed first, restored with the city)
+        Map<AncientCity.Pos, BlockData> domeBlocks = new LinkedHashMap<>();
+        if (pl.getConfig().getBoolean(Abilities.path(p, 2, "dome"), true)) {
+            Material dm = Material.matchMaterial(pl.getConfig().getString(Abilities.path(p, 2, "dome-material"), "OBSIDIAN"));
+            if (dm == null || !dm.isBlock()) dm = Material.OBSIDIAN;
+            BlockData domeData = dm.createBlockData();
+            int thick = Math.max(1, (int) Abilities.v(p, 2, "dome-thickness", 2));
+            int gap = Math.max(0, (int) Abilities.v(p, 2, "dome-gap", 1));
+            int below = Math.max(0, (int) Abilities.v(p, 2, "dome-depth", 10));
+            double rin = R + gap, rout = rin + thick;
+            int ext = (int) Math.ceil(rout);
+            for (int dy = -below; dy <= ext; dy++) {
+                for (int dx = -ext; dx <= ext; dx++) {
+                    for (int dz = -ext; dz <= ext; dz++) {
+                        double d2 = dx * dx + dy * dy + dz * dz;
+                        if (d2 < rin * rin || d2 >= rout * rout) continue;
+                        int bx = px + dx, by = py + dy, bz = pz + dz;
+                        if (by < w.getMinHeight() || by >= w.getMaxHeight()) continue;
+                        if (w.getBlockAt(bx, by, bz).getType().isSolid()) continue;   // terrain already closes the dome here
+                        domeBlocks.put(new AncientCity.Pos(bx, by, bz), domeData);
+                    }
+                }
+            }
+        }
+        Map<AncientCity.Pos, BlockData> allBlocks = new LinkedHashMap<>(domeBlocks);
+        allBlocks.putAll(city.blocks);
+
         UUID id = p.getUniqueId();
         Location center = new Location(w, px + 0.5, py + 1.5, pz + 0.5);
         List<BlockState> saved = new ArrayList<>();
         boolean[] restored = {false};
         BukkitTask[] builder = new BukkitTask[1];
-        Iterator<Map.Entry<AncientCity.Pos, BlockData>> it = city.blocks.entrySet().iterator();
+        Iterator<Map.Entry<AncientCity.Pos, BlockData>> it = allBlocks.entrySet().iterator();
 
         // ---- raise the city (batched over ticks)
         builder[0] = new BukkitRunnable() {

@@ -66,6 +66,7 @@ final class Passives {
     // ------------------------------------------------------------ permanent effects + attributes
     static void refresh(Player p) {
         PlayerData d = Aegis.I.pd(p);
+        NewClasses.syncKillHearts(p);
         for (PotionEffectType t : new ArrayList<>(d.applied)) {
             PotionEffect e = p.getPotionEffect(t);
             if (e != null && e.isInfinite()) p.removePotionEffect(t);
@@ -82,7 +83,7 @@ final class Passives {
         for (String id : unlocked(p)) {
             ConfigurationSection n = node(d.type, id);
             if (n == null) continue;
-            for (String s : n.getStringList("permanent-effects")) {
+            for (String s : permList(n, d)) {
                 String[] a = s.split(":");
                 PotionEffectType t = Abilities.fx(a[0]);
                 if (t == null) continue;
@@ -94,6 +95,13 @@ final class Passives {
         }
         if (kb != null && kbv > 0)
             kb.addModifier(new AttributeModifier(key, Math.min(1.0, kbv), AttributeModifier.Operation.ADD_NUMBER));
+    }
+
+    /** permanent-effects, or permanent-effects-max-energy once the player is at max energy. */
+    private static List<String> permList(ConfigurationSection n, PlayerData d) {
+        if (n.contains("permanent-effects-max-energy") && d.energy >= Aegis.I.getConfig().getInt("general.max-energy", 5))
+            return n.getStringList("permanent-effects-max-energy");
+        return n.getStringList("permanent-effects");
     }
 
     // ------------------------------------------------------------ proc actions
@@ -133,7 +141,7 @@ final class Passives {
 
             String when = n.getString("when", "");
             if ((when.equals("water_or_rain") && p.isInWaterOrRain()) || (when.equals("lava") && p.isInLava())
-                    || (when.equals("sculk") && onSculk(p, n))) {
+                    || (when.equals("sculk") && onSculk(p, n)) || (when.equals("day") && NewClasses.isDay(p))) {
                 for (String s : n.getStringList("effects")) {
                     String[] a = s.split(":");
                     PotionEffectType t = Abilities.fx(a[0]);

@@ -57,7 +57,31 @@ public enum ClassType {
     MIDAS("midas", "Midas",
             new String[]{"neth", "haste", "hero", "mining", "nethergold", "heads"},
             new String[]{"Netherite Tools", "Haste", "Hero of the Village", "Midas Mining", "Gilded Nether", "Head Hunter"},
-            "Golden Touch", "Bounty");
+            "Golden Touch", "Bounty"),
+    ROGUE("rogue", "Rogue",
+            new String[]{"backstab", "shuffle", "speed", "invis", "tp", "poison"},
+            new String[]{"Backstab", "Hotbar Shuffle", "Speed", "Shadow Cloak", "Shadow Blink", "Venom Touch"},
+            "Stealth", "Shadow Step"),
+    YGGDRASIL("yggdrasil", "Yggdrasil",
+            new String[]{"regen", "gap", "day", "pots", "hit", "kills"},
+            new String[]{"Regeneration", "Bountiful Fruit", "Daylight Bloom", "Potent Potions", "Living Bark", "World Tree's Gift"},
+            "Vitality Boost", "World Tree Root"),
+    JACKPOT("jackpot", "Jackpot",
+            new String[]{"saver", "speed", "gap", "shuffle", "risk", "roll"},
+            new String[]{"Lucky Pockets", "Speed", "Gambler's Gap", "Loaded Hotbars", "Risky Hits", "Rolling Blade"},
+            "Luck of the Draw", "High Roller"),
+    FATEWEAVER("fateweaver", "Fateweaver",
+            new String[]{"climb", "weaving", "venom", "webs", "spiders", "fall"},
+            new String[]{"Wall Crawler", "Weaving", "Venom Touch", "Web Saver", "Spider Kin", "Feather Fall"},
+            "Weave of Fate", "Web We Weave"),
+    SINGULARITY("singularity", "Singularity",
+            new String[]{"pull", "kb", "resist", "hunter", "fall", "void"},
+            new String[]{"Gravity Shot", "Dense Mass", "Event Horizon", "Weak Prey", "Soft Landing", "Void Walker"},
+            "Starfall", "Blackhole"),
+    SPARTAN("spartan", "Spartan",
+            new String[]{"netherite", "speed", "fall", "feather", "air", "shield"},
+            new String[]{"Netherite Spears", "Swift Stride", "Spear Landing", "Feather Dash", "Air Control", "Shield Breaker"},
+            "Champion's Steed", "Spartan's Charge");
 
     public final String id, display, a1, a2;
     public final String[] passives, passiveNames;

@@ -21,7 +21,9 @@ general:
   starting-energy: 2
   max-energy: 5
   duration-bonus-per-energy: 0.02   # +2% ability duration per energy
-  abilities-ignore-armor: true      # ONLY ability damage ignores armor (resistance/enchants/absorption still work)
+  all-damage-true: true             # EVERY hit (melee, arrows, explosions, abilities...) ignores armor. Resistance effects and absorption hearts still work
+  true-damage-ignores-enchants: true  # with all-damage-true: protection-type enchantments (Protection, Blast Prot...) are ignored too
+  abilities-ignore-armor: true      # only used when all-damage-true is false: then ONLY ability damage ignores armor
   strong-hit-threshold: 0.9         # attack-cooldown needed for passives to proc (blocks weak-hit procs)
   assign-class-on-first-join: true  # first join plays the slot-machine roll
   default-command-mode: false       # false = F / Shift+F, true = /ability 1 /ability 2
@@ -297,7 +299,7 @@ classes:
     a1: {armor-damage: 0, armor-repair: 0, cooldown: 30, distance: 30, speed: 2.0}
     a2: {armor-damage: 0, armor-repair: 0, cooldown: 180, seconds: 20, mace-cooldown-after: 120, windburst-level: 1, windburst-velocity: 1.3, overdrive-min-fall: 1.5}   # during Overdrive: no cap, no cooldown, normal mace rules
     passives:
-      mace: {mace-min-fall: 5, mace-cooldown: 10, mace-max-damage: 8.0, mace-density: 2}   # density II mace formula, capped at 8 damage (4 hearts)
+      mace: {mace-min-fall: 5, mace-cooldown: 10, mace-flat-damage: 10.0, mace-max-damage: 8.0, mace-density: 2}   # flat-damage = every smash does exactly this much (10 = 5 hearts, also during Overdrive). 0 = old fall-scaled density-II formula (capped by max-damage)
       wind: {wind-charge-straight: true, wind-charge-multiplier: 1.5}
       refund: {wind-charge-refund: 50}
       sculk: {sculk-silent: true}
@@ -338,6 +340,11 @@ classes:
       shrieker-chance: 0.01      # decorative only - never summons a Warden
       catalyst-chance: 0.015     # extra catalysts are added near the portal
       protected-materials: [BEDROCK, REINFORCED_DEEPSLATE, END_PORTAL_FRAME]
+      dome: true                 # obsidian dome sealing the domain (removed with the city)
+      dome-material: OBSIDIAN
+      dome-thickness: 2
+      dome-gap: 1                # blocks between the domain radius and the dome's inside
+      dome-depth: 10             # how far below ground level the dome reaches (solid terrain is left alone)
     passives:
       wardens: {ignored-by: [WARDEN]}
       darkness: {when: hit, chance: 5, action: effect, effect: darkness, level: 1, seconds: 10}
@@ -371,3 +378,151 @@ classes:
       mining: {autosmelt: true, autosmelt-ores-only: true, ore-multiplier: 3, debris-multiplier: 3}
       nethergold: {nether-gold-ingot-amount: 1}
       heads: {head-chance: 5, textures: {}}      # textures: {COW: "<base64 texture>"} for custom mob heads
+
+  # ---------------------------------------------------------------- ROGUE
+  rogue:
+    a1:                      # Stealth: true invisibility (hidden from everyone, armor and held items too) + speed; ends early when you are hit
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 45
+      seconds: 10
+      speed-level: 3
+    a2:                      # Shadow Step: teleport along your look direction; a silent decoy runs the opposite way (no particles)
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 20
+      range: 30
+      decoy-seconds: 4
+      decoy-speed: 0.3       # blocks per tick (0.3 = sprinting pace)
+    passives:
+      backstab: {backstab-chance: 20, backstab-multiplier: 2.0, backstab-cone: 120}   # cone = degrees behind the target that count as a backstab
+      shuffle: {when: hit, chance: 1, action: shuffle}
+      speed: {permanent-effects: ["speed:2"]}
+      invis: {permanent-effects: ["invisibility:1"]}
+      tp: {tp-behind-chance: 5}
+      poison: {when: hit, chance: 5, action: effect, effect: poison, level: 3, seconds: 3}
+
+  # ---------------------------------------------------------------- YGGDRASIL
+  yggdrasil:
+    a1:                      # Vitality Boost
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 60
+      seconds: 20
+      health-multiplier: 2.0     # doubles your max hearts
+      instant-heal: 20           # HP healed instantly (20 = 10 hearts)
+      penalty-seconds: 10        # afterwards golden apples are weakened for this long
+      penalty-saturation: 4.8    # saturation a golden apple gives during the penalty (half of vanilla); they also only give Regeneration I
+    a2:                      # World Tree Root
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 30
+      range: 30
+      damage: 4.0                # HP (2 hearts)
+      freeze-seconds: 4
+    passives:
+      regen: {permanent-effects: ["regeneration:1"]}
+      gap: {foods: [GOLDEN_APPLE, ENCHANTED_GOLDEN_APPLE], extra-saturation: 9.6}   # +9.6 on top of vanilla's 9.6 = double
+      day: {when: day, effects: ["regeneration:2"]}
+      pots: {instant-heal-level: 3}                                               # every healing potion heals like Instant Health III
+      hit: {heal-on-hit: 1.0}                                                      # half a heart per hit
+      kills: {kill-hp: 2.0, kill-max-hp: 4.0, players-only: true}                  # +1 heart per kill, up to 2 extra hearts (lost on death)
+
+  # ---------------------------------------------------------------- JACKPOT
+  jackpot:
+    a1:                      # Luck of the Draw: one of four outcomes (25% each)
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 45
+      hits: 5                # outcome 1 = next hits do x2, outcome 2 = next hits do x0.5
+      seconds: 10            # outcome 3 = potion levels doubled, outcome 4 = potion effects removed (and blocked) for this long
+    a2:                      # High Roller: next hits are 50% double damage / 50% no damage
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 30
+      hits: 5
+    passives:
+      saver: {keep-chance: 10}                                  # % chance an item is not used up (blocks, food, potions, thrown items)
+      speed: {permanent-effects: ["speed:1"]}
+      gap: {gap-double-chance: 10, gap-fail-chance: 10}         # golden apple: double absorption + saturation / does nothing
+      shuffle: {shuffle-chance: 10, self-shuffle-chance: 5}     # swaps two hotbar items of the victim / of yourself on hit
+      risk: {hit-heal-chance: 5, hit-heal-hp: 4, hit-hurt-chance: 5, hit-hurt-hp: 2}   # on hit: heal 2 hearts or take 1 heart (separate rolls)
+      roll: {sharp-min: 1, sharp-max: 10}                       # every hit re-rolls the Sharpness of your sword
+
+  # ---------------------------------------------------------------- FATEWEAVER
+  fateweaver:
+    a1:                      # Weave of Fate: you and your target share damage (armor stands work too)
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 60
+      seconds: 20
+      range: 30
+      max-distance: 50       # the thread snaps when you get further apart than this
+    a2:                      # Web We Weave: destroys every cobweb around you
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 20
+      radius: 5
+    passives:
+      climb: {climb-speed: 0.22}                                # hold Shift against a wall: look up to climb, look down to slide, level to cling
+      weaving: {permanent-effects: ["weaving:1"]}
+      venom: {when: hit, chance: 5, action: effect, effect: poison, level: 3, seconds: 3}
+      webs: {web-save-chance: 25}                               # % chance a placed cobweb is not used up
+      spiders: {ignored-by: [SPIDER, CAVE_SPIDER]}
+      fall: {no-fall-damage: true}
+
+  # ---------------------------------------------------------------- SINGULARITY
+  singularity:
+    a1:                      # Starfall: launch up, slam down, explosion + damage
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 60
+      launch-velocity: 1.9
+      slam-speed: 2.6
+      radius: 6
+      damage: 6.0            # HP (3 hearts)
+      explosion-power: 4
+      break-blocks: false    # true = the explosion also breaks blocks
+    a2:                      # Blackhole: pulls everything in, then implodes
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 45
+      range: 25
+      radius: 14             # pull radius
+      seconds: 5
+      pull: 0.85
+      implode-radius: 8
+      damage: 4.0            # HP (2 hearts)
+    passives:
+      pull: {arrow-pull: 1.2}                                   # arrows pull the target towards you
+      kb: {knockback-resistance: 0.5}
+      resist: {permanent-effects: ["resistance:1"]}
+      hunter: {low-hp-bonus: 1.25, hp-threshold: 12}            # +25% damage to targets under 6 hearts
+      fall: {no-fall-damage: true}
+      void: {void-immune: true}                                 # void damage puts you back on the last ground you stood on
+
+  # ---------------------------------------------------------------- SPARTAN
+  spartan:
+    a1:                      # Champion's Steed: a tamed, saddled, armored horse with max stats
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 60
+      health: 30
+      speed: 0.3375
+      jump: 1.0
+    a2:                      # Spartan's Charge: lunge that deals true damage, knocks back and disables shields
+      armor-damage: 0
+      armor-repair: 0
+      cooldown: 30
+      dash-speed: 1.9
+      damage: 3.0            # HP (1.5 hearts)
+      knockback: 1.1
+      shield-break-seconds: 20
+    passives:                # one unlocks per energy: 0E, 1E, 2E, 3E, 4E, 5E
+      netherite: {diamond-to-netherite: true}                   # diamond spears in your inventory become netherite
+      speed: {permanent-effects: ["speed:1"], permanent-effects-max-energy: ["speed:2"]}
+      fall: {no-fall-damage: true, requires-spear: true, fall-damage-on: [POINTED_DRIPSTONE]}
+      feather: {feather-dash-cooldown: 30, feather-dash-speed: 1.4}   # right-click a feather to dash
+      air: {air-boost: 1.07, max-speed: 0.7}                    # keeps your momentum in the air
+      shield: {shield-break-speed: 10, shield-cooldown: 5}      # spear hits above 10 blocks/s break shields for 5s
+
