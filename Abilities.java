@@ -49,7 +49,7 @@ final class Abilities {
         ClassType t = pl().pd(p).type;
         return "classes." + (t == null ? "none" : t.id) + ".a" + n + "." + key;
     }
-    static double v(Player p, int n, String key, double def) { return cfg().getDouble(path(p, n, key), def); }
+    static double v(Player p, int n, String key, double def) { return Vows.scale(p, n, key, cfg().getDouble(path(p, n, key), def)); }
     static String s(Player p, int n, String key, String def) { return cfg().getString(path(p, n, key), def); }
     static List<String> list(Player p, int n, String key) { return cfg().getStringList(path(p, n, key)); }
 
@@ -192,6 +192,7 @@ final class Abilities {
         ClassType t = d.type;
         if (t == null || d.rolling || (n == 2 && t.a2 == null) || p.isDead()) return;
         if (Status.on(Status.stun, p) || Status.on(Status.freeze, p)) { msg(p, "You are stunned!"); return; }
+        if (!d.vows.isEmpty() && Vows.state(p).sacAbilities.contains(n)) { msg(p, t.abilityName(n) + " was sacrificed to a binding vow."); return; }
 
         if (t == ClassType.AZAROTH && n == 1 && Pets.alive(p)) { msg(p, "Your Warden is still alive."); return; }
         boolean toggle = (t == ClassType.YMIR && n == 1 && duels.containsKey(p.getUniqueId()))
@@ -228,6 +229,7 @@ final class Abilities {
             int rep = (int) v(p, n, "armor-repair", 0);          // durability healed on every armor piece you wear
             if (rep > 0) Gear.armorDelta(p, -rep);
             Fx.cast(p, t, n);
+            Fx.castAura(p, t, n);   // extra burst, shockwaves and a swirling aura around the caster
         }
     }
 

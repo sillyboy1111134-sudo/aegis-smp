@@ -30,7 +30,7 @@ Passives (unlock order): permanent Regeneration I, double golden-apple saturatio
 All numbers are in `config.yml` under `classes.rogue` / `classes.yggdrasil`.
 
 ## True damage
-All damage ignores armor and protection enchantments (`general.all-damage-true`, `general.true-damage-ignores-enchants` in `config.yml`). Resistance effects and absorption hearts still reduce it. Set `all-damage-true: false` to go back to only abilities ignoring armor.
+All ability damage is true damage: it ignores armor and protection enchantments (`general.abilities-ignore-armor`, `general.true-damage-ignores-enchants` in `config.yml`). Resistance effects and absorption hearts still reduce it. Set `general.all-damage-true: true` to make every hit true damage.
 
 ## Jackpot, Fateweaver, Singularity, Spartan
 Settings for all four are under `classes.jackpot`, `classes.fateweaver`, `classes.singularity` and `classes.spartan` in `config.yml`.
@@ -38,3 +38,19 @@ Settings for all four are under `classes.jackpot`, `classes.fateweaver`, `classe
 - **Fateweaver** - Shift against a wall to climb, permanent Weaving, spiders ignore you. Weave of Fate shares damage with a target; Web We Weave clears cobwebs.
 - **Singularity** - arrows pull targets in, 50% knockback resistance, Resistance I, void-proof. Starfall and Blackhole.
 - **Spartan** - netherite spears, Speed I/II, feather dash, air momentum, shield-breaking spears. Champion's Steed and Spartan's Charge.
+
+## Mega Mace (legendary weapon)
+Only one can ever be crafted (heavy core in the top middle, a netherite block on each side of it, a nether star under it and a breeze rod under that). Vanilla mace crafting is removed. The crafter's name is shown as a title to everyone.
+Shift + right-click switches Breach II / Density II, F dashes 10 blocks, 3 airborne hits shred 80 durability off every armor piece, breaks shields like an axe, sword attack speed, always Wind Burst I, hits are capped at 5 hearts.
+Admin: `/aegis megamace give [player]`, `/aegis megamace reset`. Numbers are under `megamace` in `config.yml`.
+
+## Binding Vows (/vow)
+Permanent sacrifices for permanent gains. `/vow list`, `/vow info <vow>`, `/vow take <vow> ...` then `/vow confirm`, `/vow status`.
+A vow is binding: it can never be taken back, and abilities/passives a vow touched are locked in (a buffed ability or passive can't be sacrificed later). Vows stay when you reroll your class: they keep applying to the same ability and passive slots of your new class, and vows can still never push damage past 5 hearts.
+- **Cart** (2 hearts): your TNT minecarts can explode, nobody else's can; blast capped at 5 hearts.
+- **Exchange** (1 ability): double the other ability's damage or duration (never above 5 hearts of damage). Agni's Fireball charges in half the time instead.
+- **Focus** (2 passives): one ability gets -40% cooldown and +50% duration.
+- **Kinship** (1 passive): another passive becomes 50% stronger.
+- **Blood** (2 hearts): all cooldowns -25%.
+- **Phoenix** (1 ability): survive a killing blow with 3 hearts, every 15 minutes.
+Limits are under `vows` in `config.yml`.

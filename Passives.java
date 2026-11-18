@@ -22,7 +22,7 @@ final class Passives {
 
     static ConfigurationSection node(Player p, String pid) {
         ClassType t = Aegis.I.pd(p).type;
-        return t == null ? null : node(t, pid);
+        return t == null ? null : Vows.scalePassive(p, pid, node(t, pid));   // stronger when a vow bound it
     }
 
     /** Energy needed for passive #idx. First = 0, last = max energy, rest spread evenly. */
@@ -32,7 +32,15 @@ final class Passives {
         return n <= 1 ? 0 : Math.round((float) idx * max / (n - 1));
     }
 
+    /** Passives sacrificed to a vow are gone for good. */
     static List<String> unlocked(Player p) {
+        List<String> r = unlockedRaw(p);
+        if (!Aegis.I.pd(p).vows.isEmpty()) r.removeIf(Vows.state(p).sacPassives::contains);
+        return r;
+    }
+
+    /** Unlocked by energy, whether or not a vow sacrificed them. */
+    static List<String> unlockedRaw(Player p) {
         PlayerData d = Aegis.I.pd(p);
         List<String> r = new ArrayList<>();
         if (d.type == null) return r;
@@ -67,6 +75,7 @@ final class Passives {
     static void refresh(Player p) {
         PlayerData d = Aegis.I.pd(p);
         NewClasses.syncKillHearts(p);
+        Vows.syncHearts(p);
         for (PotionEffectType t : new ArrayList<>(d.applied)) {
             PotionEffect e = p.getPotionEffect(t);
             if (e != null && e.isInfinite()) p.removePotionEffect(t);
@@ -81,7 +90,7 @@ final class Passives {
 
         double kbv = 0;
         for (String id : unlocked(p)) {
-            ConfigurationSection n = node(d.type, id);
+            ConfigurationSection n = node(p, id);
             if (n == null) continue;
             for (String s : permList(n, d)) {
                 String[] a = s.split(":");

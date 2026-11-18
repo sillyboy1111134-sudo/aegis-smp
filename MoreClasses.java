@@ -73,6 +73,7 @@ final class MoreClasses {
 
     private static void tickAll(int c) {
         for (Player p : Bukkit.getOnlinePlayers()) {
+            MegaMace.tick(p);
             ClassType t = Aegis.I.pd(p).type;
             if (t == null) continue;
             switch (t) {

@@ -11,6 +11,8 @@ public final class PlayerData {
     public int energy;
     public boolean cmdMode;
     public final Set<UUID> trusted = new HashSet<>();
+    public final Map<String, String> vows = new LinkedHashMap<>();   // binding vows: id -> parameters
+    Vows.State vowState;      // cache of what the vows add up to (null = recompute)
 
     final Map<String, long[]> cd = new HashMap<>();          // key -> {endMillis, totalMillis}
     final Set<PotionEffectType> applied = new HashSet<>();   // permanent effects we applied

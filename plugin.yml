@@ -18,6 +18,9 @@ commands:
     description: Admin command
     usage: /aegis <give|setclass|setenergy|enchant|reload>
     permission: aegis.admin
+  vow:
+    description: Make a binding vow (permanent sacrifice for a permanent gain)
+    usage: /vow <list|info|take|confirm|cancel|status>
   enchant:
     description: Apply Aegis custom enchants (anything else goes to vanilla /enchant)
     usage: /enchant [player] <id> [level]

@@ -21,9 +21,9 @@ general:
   starting-energy: 2
   max-energy: 5
   duration-bonus-per-energy: 0.02   # +2% ability duration per energy
-  all-damage-true: true             # EVERY hit (melee, arrows, explosions, abilities...) ignores armor. Resistance effects and absorption hearts still work
-  true-damage-ignores-enchants: true  # with all-damage-true: protection-type enchantments (Protection, Blast Prot...) are ignored too
-  abilities-ignore-armor: true      # only used when all-damage-true is false: then ONLY ability damage ignores armor
+  all-damage-true: false            # true = EVERY hit (melee, arrows, explosions...) ignores armor, not just abilities
+  true-damage-ignores-enchants: true  # true damage also ignores protection-type enchantments (Protection, Blast Prot...). Resistance effects and absorption hearts still work
+  abilities-ignore-armor: true      # ABILITY damage is true damage (ignores armor)
   strong-hit-threshold: 0.9         # attack-cooldown needed for passives to proc (blocks weak-hit procs)
   assign-class-on-first-join: true  # first join plays the slot-machine roll
   default-command-mode: false       # false = F / Shift+F, true = /ability 1 /ability 2
@@ -46,6 +46,8 @@ particles:
   enabled: true
   intensity: 1.0     # 0.5 = half the particles, 2.0 = double (lower it if players lag)
   ambient: true      # themed aura around every player, denser with more energy
+  cast-aura: true    # every ability: burst, shockwaves and a swirling aura around the caster
+  cast-aura-seconds: 3.0
 
 hud:
   mode: glyph              # glyph = needs the resource pack (icon with bar underneath); text = plain fallback
@@ -525,4 +527,34 @@ classes:
       feather: {feather-dash-cooldown: 30, feather-dash-speed: 1.4}   # right-click a feather to dash
       air: {air-boost: 1.07, max-speed: 0.7}                    # keeps your momentum in the air
       shield: {shield-break-speed: 10, shield-cooldown: 5}      # spear hits above 10 blocks/s break shields for 5s
+
+# ---------------------------------------------------------------- MEGA MACE (legendary weapon, only one can ever be crafted)
+# Recipe:  netherite block | heavy core | netherite block
+#                          | nether star
+#                          | breeze rod
+# Vanilla mace crafting is removed. /aegis megamace reset allows crafting it again.
+megamace:
+  enchant-level: 2            # Breach and Density level
+  damage-cap: 10.0            # max HP per hit with the mace (10 = 5 hearts)
+  dash-distance: 10
+  dash-cooldown: 5            # seconds between F dashes
+  shield-disable-seconds: 5   # like an axe
+  armor-hits: 3               # consecutive hits without touching the ground...
+  armor-durability: 80        # ...damage this much durability on every armor piece
+
+# ---------------------------------------------------------------- BINDING VOWS  (/vow list)
+# Permanent sacrifices for permanent gains. A vow can never be taken back (they stay through class rerolls and apply to the same ability / passive slots of the new class; /aegis vow clear wipes them).
+vows:
+  enabled: true
+  max-vows: 2                    # per player
+  heart-cost-hp: 4               # "2 hearts" = 4 HP
+  max-heart-sacrifice-hp: 8      # most health a player can ever give up (4 hearts)
+  damage-cap: 10.0               # vows never push an ability past this per hit (10 = 5 hearts)
+  passive-buff: 1.5              # Vow of Kinship: chances / amounts / effect strength x1.5
+  focus-cooldown: 0.6            # Vow of Focus: cooldown multiplier (x0.6 = -40%)
+  focus-duration: 1.5            # Vow of Focus: duration multiplier
+  blood-cooldown: 0.75           # Vow of Blood: all cooldowns x0.75
+  min-cooldown-mult: 0.5         # cooldowns never drop below half
+  phoenix-cooldown: 900          # seconds
+  phoenix-hearts: 3
 

@@ -36,6 +36,10 @@ public final class Aegis extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new UtilityListener(), this);
         getServer().getPluginManager().registerEvents(new CustomEnchantListener(), this);
         getServer().getPluginManager().registerEvents(new ExtraListener(), this);
+        getServer().getPluginManager().registerEvents(new MegaMaceListener(), this);
+        getServer().getPluginManager().registerEvents(new VowListener(), this);
+        MegaMace.load();
+        MegaMace.register();
         MoreClasses.startTicker();
         Soulbound.load();
 
@@ -44,6 +48,8 @@ public final class Aegis extends JavaPlugin {
             PluginCommand cmd = getCommand(n);
             if (cmd != null) { cmd.setExecutor(c); cmd.setTabCompleter(c); }
         }
+        PluginCommand vowCmd = getCommand("vow");
+        if (vowCmd != null) { VowCommand vc = new VowCommand(); vowCmd.setExecutor(vc); vowCmd.setTabCompleter(vc); }
         Recipes.register();
         Tasks.start();
         for (Player p : Bukkit.getOnlinePlayers()) { Status.clearMods(p); Passives.refresh(p); }
@@ -90,6 +96,8 @@ public final class Aegis extends JavaPlugin {
                 d.energy = s.getInt(key + ".energy", getConfig().getInt("general.starting-energy", 2));
                 d.cmdMode = s.getBoolean(key + ".cmd", false);
                 for (String t : s.getStringList(key + ".trusted")) d.trusted.add(UUID.fromString(t));
+                ConfigurationSection vs = s.getConfigurationSection(key + ".vows");
+                if (vs != null) for (String vid : vs.getKeys(false)) d.vows.put(vid, vs.getString(vid, ""));
                 data.put(id, d);
             } catch (Exception ignored) { }
         }
@@ -106,6 +114,7 @@ public final class Aegis extends JavaPlugin {
             List<String> t = new ArrayList<>();
             for (UUID u : d.trusted) t.add(u.toString());
             y.set(k + ".trusted", t);
+            for (Map.Entry<String, String> v : d.vows.entrySet()) y.set(k + ".vows." + v.getKey(), v.getValue());
         }
         try { getDataFolder().mkdirs(); y.save(dataFile); } catch (IOException ex) { getLogger().warning("Could not save data.yml: " + ex.getMessage()); }
     }

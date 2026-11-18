@@ -593,6 +593,86 @@ final class Fx {
         expand(at, .5, Math.max(3, power), 8, 40, l -> { part(l, Particle.FLAME, 1, 0, .1, 0, .03); dust(l, 1, 0, 0xFF6D00, 1.8f); });
     }
 
+    // ================================================================ cast aura (every ability)
+    private static int auraColor(ClassType t) {
+        return switch (t) {
+            case SHACKLED -> 0x9E9E9E;
+            case MOANDER -> 0x1B5E20;
+            case CHRONO, JACKPOT -> 0xFFC107;
+            case ICOR -> 0xB00020;
+            case BERSERKER -> 0x8B0000;
+            case DOLUS -> 0x8D6E63;
+            case SAMURAI -> 0xCFD8DC;
+            case YMIR -> 0x4FC3F7;
+            case VARUNA -> 0x29B6F6;
+            case AGNI -> 0xFF5722;
+            case HEPHAESTUS -> 0xFF6D00;
+            case BOREUS -> 0x81D4FA;
+            case AZAROTH -> 0x00ACC1;
+            case MIDAS -> 0xFFD700;
+            case YGGDRASIL -> 0x66BB6A;
+            case FATEWEAVER -> 0xB388FF;
+            case SINGULARITY -> 0x5B1FD6;
+            case SPARTAN -> 0xC62828;
+            default -> 0xFFFFFF;
+        };
+    }
+
+    private static Particle auraTheme(ClassType t) {
+        return switch (t) {
+            case SHACKLED, BERSERKER, SPARTAN -> Particle.CRIT;
+            case MOANDER -> Particle.SOUL;
+            case CHRONO -> Particle.END_ROD;
+            case ICOR -> Particle.DAMAGE_INDICATOR;
+            case DOLUS -> Particle.POOF;
+            case SAMURAI -> Particle.ENCHANTED_HIT;
+            case YMIR -> Particle.SNOWFLAKE;
+            case VARUNA -> Particle.DRIPPING_WATER;
+            case AGNI -> Particle.FLAME;
+            case HEPHAESTUS -> Particle.LAVA;
+            case BOREUS -> Particle.CLOUD;
+            case AZAROTH -> Particle.SCULK_SOUL;
+            case MIDAS -> Particle.WAX_ON;
+            case YGGDRASIL -> Particle.HAPPY_VILLAGER;
+            case JACKPOT -> Particle.TOTEM_OF_UNDYING;
+            case FATEWEAVER -> Particle.WITCH;
+            case SINGULARITY -> Particle.REVERSE_PORTAL;
+            default -> Particle.END_ROD;
+        };
+    }
+
+    /** Extra flair for every ability: a burst, two shockwaves and a swirling aura around the caster for a few seconds. */
+    static void castAura(Player p, ClassType t, int n) {
+        if (!on() || !Aegis.I.getConfig().getBoolean("particles.cast-aura", true)) return;
+        if (t == ClassType.ROGUE) return;   // stealth and the shadow decoy are tricks: no particles on purpose
+        final int rgb = auraColor(t);
+        final Particle theme = auraTheme(t);
+        final int life = (int) Math.round(Aegis.I.getConfig().getDouble("particles.cast-aura-seconds", 3.0) * 20);
+        Location feet = p.getLocation().add(0, 0.15, 0);
+        Location mid = p.getLocation().add(0, 1, 0);
+        burst(mid, theme, 40, .35);
+        burst(mid, Particle.END_ROD, 20, .25);
+        expand(feet, .5, 6, 12, 36, l -> { dust(l, 1, 0, rgb, 1.5f); part(l, theme, 1, 0, 0, 0, 0); });
+        org.bukkit.Bukkit.getScheduler().runTaskLater(Aegis.I, () -> {
+            if (p.isValid()) expand(p.getLocation().add(0, 0.15, 0), .5, 4, 10, 28, l -> dust(l, 1, 0, rgb, 1.2f));
+        }, 6L);
+        follow(p, life, (l, k) -> {
+            Location base = l.clone();
+            spiral(base, k, 1.1, 2.2, 3, x -> { dust(x, 1, 0, rgb, 1.3f); part(x, theme, 1, 0, 0, 0, 0); });
+            spiral(base, k + 20, 0.7, 2.2, 2, x -> dust(x, 1, 0, rgb, 1.0f));
+            double a = k * 0.4;
+            for (int i = 0; i < 6; i++) {
+                double ang = a + i * Math.PI / 3;
+                dust(base.clone().add(Math.cos(ang) * 0.9, 1.0, Math.sin(ang) * 0.9), 1, 0, rgb, 1.1f);
+            }
+            for (int i = 0; i < 6; i++) {
+                double ang = -a + i * Math.PI / 3;
+                dust(base.clone().add(Math.cos(ang) * 0.35, 2.15, Math.sin(ang) * 0.35), 1, 0, rgb, 0.9f);
+            }
+            if (k % 6 == 0) ring(base.clone().add(0, 0.1, 0), 1.6, 18, x -> dust(x, 1, 0, rgb, 1.0f));
+        });
+    }
+
     /** Constant, class-coloured aura. Gets denser with every energy. */
     static void ambient(Player p) {
         if (!on() || !Aegis.I.getConfig().getBoolean("particles.ambient", true)) return;

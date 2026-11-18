@@ -69,8 +69,9 @@ public final class CombatListener implements Listener {
             if (pen > 0) e.setDamage(DamageModifier.ARMOR, e.getDamage(DamageModifier.ARMOR)
                     * (1 - Math.min(1.0, pen * CustomEnchantListener.cfgD("penetration.percent-per-level", 0.10))));
         }
-        boolean allTrue = pl.getConfig().getBoolean("general.all-damage-true", true);
-        if ((allTrue || (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true))) && e.isApplicable(DamageModifier.ARMOR)) {
+        boolean allTrue = pl.getConfig().getBoolean("general.all-damage-true", false);
+        boolean trueDmg = allTrue || (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true));
+        if (trueDmg && e.isApplicable(DamageModifier.ARMOR)) {
             double base = e.getDamage(DamageModifier.BASE)
                     + (e.isApplicable(DamageModifier.HARD_HAT) ? e.getDamage(DamageModifier.HARD_HAT) : 0)
                     + (e.isApplicable(DamageModifier.BLOCKING) ? e.getDamage(DamageModifier.BLOCKING) : 0);
@@ -80,8 +81,18 @@ public final class CombatListener implements Listener {
                 e.setDamage(DamageModifier.RESISTANCE, -Math.min(1.0, 0.2 * (r.getAmplifier() + 1)) * base);
         }
         // true damage: protection-type enchantments are ignored too (Resistance and absorption hearts still work)
-        if (allTrue && pl.getConfig().getBoolean("general.true-damage-ignores-enchants", true) && e.isApplicable(DamageModifier.MAGIC))
+        if (trueDmg && pl.getConfig().getBoolean("general.true-damage-ignores-enchants", true) && e.isApplicable(DamageModifier.MAGIC))
             e.setDamage(DamageModifier.MAGIC, 0);
+        // Mega Mace: hits never deal more than megamace.damage-cap (default 10 HP = 5 hearts)
+        if (e instanceof EntityDamageByEntityEvent me && me.getDamager() instanceof Player mp && MegaMace.isMace(mp.getInventory().getItemInMainHand())) {
+            double cap = pl.getConfig().getDouble("megamace.damage-cap", 10.0), f = e.getFinalDamage();
+            if (f > cap) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) - (f - cap));
+        }
+        // Vow of the Cart: the blast of a vow cart is capped too
+        if (e instanceof EntityDamageByEntityEvent ce && ce.getDamager() instanceof org.bukkit.entity.minecart.ExplosiveMinecart mc && Vows.isVowCart(mc)) {
+            double vcap = Vows.cap(), vf = e.getFinalDamage();
+            if (vf > vcap) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) - (vf - vcap));
+        }
         if (v instanceof Player p) {
             ConfigurationSection n = Passives.first(p, "max-damage");
             if (n != null) {
@@ -92,6 +103,9 @@ public final class CombatListener implements Listener {
         // Immortal (armor enchant): survive a killing blow
         if (v instanceof Player ip && e.getCause() != EntityDamageEvent.DamageCause.VOID
                 && ip.getHealth() - e.getFinalDamage() <= 0 && CustomEnchantListener.tryImmortal(ip)) e.setCancelled(true);
+        // Vow of the Phoenix: survive a killing blow
+        if (!e.isCancelled() && v instanceof Player ph && e.getCause() != EntityDamageEvent.DamageCause.VOID
+                && ph.getHealth() - e.getFinalDamage() <= 0 && Vows.tryPhoenix(ph)) e.setCancelled(true);
     }
 
     // ------------------------------------------------------------------ melee
