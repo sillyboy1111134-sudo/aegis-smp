@@ -35,9 +35,9 @@ All ability damage is true damage: it ignores armor and protection enchantments 
 ## Jackpot, Fateweaver, Singularity, Spartan
 Settings for all four are under `classes.jackpot`, `classes.fateweaver`, `classes.singularity` and `classes.spartan` in `config.yml`.
 - **Jackpot** - 10% of item uses are free, Speed I, gambler's golden apples, hotbar shuffles, risky hits and a sword that re-rolls Sharpness 1-10 on every hit. Luck of the Draw and High Roller.
-- **Fateweaver** - Shift against a wall to climb, permanent Weaving, spiders ignore you. Weave of Fate shares damage with a target; Web We Weave clears cobwebs.
+- **Fateweaver** - Shift against a wall to climb, permanent Weaving, spiders ignore you. Weave of Fate: use it once to mark an entity, use it again on a second entity to link the two so damage to one hits both; Web We Weave clears cobwebs.
 - **Singularity** - arrows pull targets in, 50% knockback resistance, Resistance I, void-proof. Starfall and Blackhole.
-- **Spartan** - netherite spears, Speed I/II, feather dash, air momentum, shield-breaking spears. Champion's Steed and Spartan's Charge.
+- **Spartan** - netherite spears, Speed I/II, feather dash, air momentum (Shift + right-click switches it on / off), shield-breaking spears. Champion's Steed and Spartan's Charge.
 
 ## Mega Mace (legendary weapon)
 Only one can ever be crafted (heavy core in the top middle, a netherite block on each side of it, a nether star under it and a breeze rod under that). Vanilla mace crafting is removed. The crafter's name is shown as a title to everyone.
@@ -47,10 +47,21 @@ Admin: `/aegis megamace give [player]`, `/aegis megamace reset`. Numbers are und
 ## Binding Vows (/vow)
 Permanent sacrifices for permanent gains. `/vow list`, `/vow info <vow>`, `/vow take <vow> ...` then `/vow confirm`, `/vow status`.
 A vow is binding: it can never be taken back, and abilities/passives a vow touched are locked in (a buffed ability or passive can't be sacrificed later). Vows stay when you reroll your class: they keep applying to the same ability and passive slots of your new class, and vows can still never push damage past 5 hearts.
-- **Cart** (2 hearts): your TNT minecarts can explode, nobody else's can; blast capped at 5 hearts.
 - **Exchange** (1 ability): double the other ability's damage or duration (never above 5 hearts of damage). Agni's Fireball charges in half the time instead.
 - **Focus** (2 passives): one ability gets -40% cooldown and +50% duration.
 - **Kinship** (1 passive): another passive becomes 50% stronger.
 - **Blood** (2 hearts): all cooldowns -25%.
 - **Phoenix** (1 ability): survive a killing blow with 3 hearts, every 15 minutes.
 Limits are under `vows` in `config.yml`.
+
+Forced Duel (Ymir) uses a 10 block radius arena (`duel-radius`) with visible walls for everyone. The Mega Mace dash keeps your momentum (`dash-carry`).
+
+## Cooldowns, vows and ultimates
+- Cooldowns only start recharging once the ability has ended (`general.cooldown-after-ability`). Potion effects an ability takes away (Jackpot's Luck of the Draw, Rogue's Stealth) are given back afterwards with the time they had left.
+- Binding vows need max energy (`vows.min-energy`). Admins remove them with `/vow remove <player> [vow]` (or `/aegis vow clear <player>`).
+- **Ultimates (base only):** at max energy `/ult take <ultimate> <1|2> <passive> <passive>` gives up one ability and two passives for an ultimate from any class; it takes that ability's place. Ultimates and vows exclude each other. Admins: `/ult remove <player>`. The ultimates themselves are registered in `Ults.init()`.
+
+## Ultimates
+`/ult list` shows them. At max energy: `/ult take <ultimate> <passive> <passive>` then `/ult confirm`. The ultimate replaces your LAST ability (Azaroth's replaces the first); below max energy the normal ability comes back but the two passives stay lost. Permanent (admins: `/ult remove <player>`), and it excludes binding vows.
+Bloodbath (Icor), Indomitable (Ymir), Tides of the Abyss (Varuna), A Piece of Hell (Agni), Workshop (Hephaestus), Sky Ruler (Boreus), True Guardian of the Deep (Azaroth), Golden God (Midas), Shadow Manipulation (Rogue), Idol Death Gamble (Jackpot), Avoidance of Fate (Fateweaver), Supreme Singularity (Singularity), Ares' Wrath (Spartan), The Flow of Time (Chrono), Waves of Desolation (Moander), Seismic Tremor (Dolus), Domain of the World Tree (Yggdrasil), Chains of Fate (Shackled), Defiant Rage (Berserker), Sword God (Samurai).
+Domains (Agni, Hephaestus, Jackpot, Yggdrasil, Moander, Rogue's shadow pool) place temporary blocks that are restored when they end. Casino: drop a `.schem` into `plugins/AegisSMP/` as `casino.schem`.

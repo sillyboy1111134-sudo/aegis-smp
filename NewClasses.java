@@ -78,7 +78,17 @@ final class NewClasses {
     }
 
     // ================================================================ ROGUE: Stealth
+    static final Map<UUID, List<PotionEffect>> stealthSaved = new HashMap<>();
+    static final Map<UUID, Long> stealthStart = new HashMap<>();
+
     static boolean stealth(Player p) {
+        List<PotionEffect> saved = new ArrayList<>();
+        for (PotionEffectType ty : new PotionEffectType[]{PotionEffectType.SPEED, PotionEffectType.INVISIBILITY}) {
+            PotionEffect cur = p.getPotionEffect(ty);
+            if (cur != null && !cur.isInfinite()) saved.add(cur);   // potion effects the stealth is about to replace
+        }
+        stealthSaved.put(p.getUniqueId(), saved);
+        stealthStart.put(p.getUniqueId(), System.currentTimeMillis());
         double sec = Abilities.secs(p, Abilities.v(p, 1, "seconds", 10));
         int ticks = (int) Math.round(sec * 20);
         int speed = (int) Abilities.v(p, 1, "speed-level", 3);
@@ -98,20 +108,43 @@ final class NewClasses {
         return true;
     }
 
+    private static final org.bukkit.inventory.EquipmentSlot[] GEAR = {
+            org.bukkit.inventory.EquipmentSlot.HAND, org.bukkit.inventory.EquipmentSlot.OFF_HAND, org.bukkit.inventory.EquipmentSlot.HEAD,
+            org.bukkit.inventory.EquipmentSlot.CHEST, org.bukkit.inventory.EquipmentSlot.LEGS, org.bukkit.inventory.EquipmentSlot.FEET};
+
+    /** Invisible AND bare: others get empty equipment for you. You stay a real, hittable entity. */
     private static void hideFromAll(Player p) {
+        ItemStack air = new ItemStack(Material.AIR);
         for (Player v : Bukkit.getOnlinePlayers()) {
             if (v.equals(p) || Abilities.trusts(p, v)) continue;
-            v.hideEntity(Aegis.I, p);
+            for (org.bukkit.inventory.EquipmentSlot sl : GEAR) v.sendEquipmentChange(p, sl, air);
+        }
+    }
+
+    private static void showGear(Player p) {
+        for (Player v : Bukkit.getOnlinePlayers()) {
+            if (v.equals(p)) continue;
+            for (org.bukkit.inventory.EquipmentSlot sl : GEAR) v.sendEquipmentChange(p, sl, p.getEquipment().getItem(sl));
         }
     }
 
     static void endStealth(Player p) {
         boolean was = stealth.remove(p.getUniqueId()) != null;
-        for (Player v : Bukkit.getOnlinePlayers()) if (!v.equals(p)) v.showEntity(Aegis.I, p);
+        showGear(p);
         if (was) {
             p.removePotionEffect(PotionEffectType.SPEED);
             p.removePotionEffect(PotionEffectType.INVISIBILITY);
             Passives.refresh(p);   // puts the permanent speed / invisibility back
+            List<PotionEffect> saved = stealthSaved.remove(p.getUniqueId());
+            Long st = stealthStart.remove(p.getUniqueId());
+            if (saved != null && st != null) {   // ...and the potion effects it replaced come back with the time they had left
+                long elapsed = (System.currentTimeMillis() - st) / 50;
+                for (PotionEffect e : saved) {
+                    long left = e.getDuration() - elapsed;
+                    if (left > 0) p.addPotionEffect(new PotionEffect(e.getType(), (int) left, e.getAmplifier(), e.isAmbient(), e.hasParticles(), e.hasIcon()));
+                }
+            }
+            Aegis.I.pd(p).endActive(1);   // stealth is over: the cooldown starts now
         }
     }
 
@@ -366,11 +399,14 @@ final class NewClasses {
         vitality.remove(p.getUniqueId());
         penalty.remove(p.getUniqueId());
         MoreClasses.cleanup(p);
+        UltImpl.cleanup(p);
     }
 
     static void shutdown() {
         for (ArmorStand a : new ArrayList<>(decoys)) a.remove();
         decoys.clear();
         MoreClasses.shutdown();
+        DuelBarrier.shutdown();
+        UltImpl.shutdown();
     }
 }

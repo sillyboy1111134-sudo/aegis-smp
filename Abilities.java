@@ -186,22 +186,55 @@ final class Abilities {
         }.runTaskTimer(pl(), 1, 1);
     }
 
+    // ================================================================ cooldowns start when the ability ends
+    static final Map<UUID, Double> activeHints = new HashMap<>();
+
+    /** An ability that only knows at cast time how long it stays active (Jackpot) tells use() here. */
+    static void activeHint(Player p, double secs) { activeHints.put(p.getUniqueId(), secs); }
+
+    /** How long the ability is "running"; its cooldown only starts recharging after that. */
+    static double activeSeconds(Player p, ClassType t, int n) {
+        if (!cfg().getBoolean("general.cooldown-after-ability", true)) return 0;
+        return switch (t) {
+            case SHACKLED -> n == 1 ? secs(p, v(p, 1, "seconds", 10)) : 0;
+            case MOANDER -> n == 2 ? secs(p, v(p, 2, "seconds", 20)) : 0;
+            case CHRONO -> secs(p, v(p, n, "seconds", n == 1 ? 2.5 : 30));
+            case ICOR -> n == 2 ? secs(p, v(p, 2, "seconds", 30)) : 0;
+            case BERSERKER -> n == 1 ? secs(p, v(p, 1, "seconds", 20)) + v(p, 1, "after-seconds", 20) : 0;
+            case SAMURAI -> n == 1 ? secs(p, v(p, 1, "seconds", 10)) : secs(p, v(p, 2, "window-seconds", 10));
+            case YMIR -> n == 2 ? secs(p, v(p, 2, "seconds", 5)) : 0;       // Forced Duel starts its own cooldown when the duel ends
+            case VARUNA -> n == 2 ? secs(p, v(p, 2, "seconds", 5)) : 0;
+            case AGNI -> n == 1 ? secs(p, v(p, 1, "seconds", 20)) : 0;
+            case BOREUS -> n == 2 ? secs(p, v(p, 2, "seconds", 20)) : 0;
+            case AZAROTH -> n == 2 ? secs(p, v(p, 2, "seconds", 60)) : 0;
+            case MIDAS -> n == 2 ? secs(p, v(p, 2, "seconds", 120)) : 0;
+            case ROGUE -> n == 1 ? secs(p, v(p, 1, "seconds", 10)) : 0;
+            case YGGDRASIL -> n == 1 ? secs(p, v(p, 1, "seconds", 20)) : 0;
+            case FATEWEAVER -> n == 1 ? secs(p, v(p, 1, "seconds", 20)) : 0;
+            case SINGULARITY -> n == 1 ? 10 : secs(p, v(p, 2, "seconds", 5));   // Starfall ends on impact (max 10s)
+            default -> 0;   // Jackpot sets it through activeHint(); Dolus, Hephaestus and Spartan are instant
+        };
+    }
+
     // ================================================================ entry point
     static void use(Player p, int n) {
         PlayerData d = pl().pd(p);
         ClassType t = d.type;
         if (t == null || d.rolling || (n == 2 && t.a2 == null) || p.isDead()) return;
         if (Status.on(Status.stun, p) || Status.on(Status.freeze, p)) { msg(p, "You are stunned!"); return; }
+        if (Ults.slot(p) == n) { Ults.cast(p, n); return; }   // this slot was replaced by an ultimate
         if (!d.vows.isEmpty() && Vows.state(p).sacAbilities.contains(n)) { msg(p, t.abilityName(n) + " was sacrificed to a binding vow."); return; }
 
         if (t == ClassType.AZAROTH && n == 1 && Pets.alive(p)) { msg(p, "Your Warden is still alive."); return; }
         boolean toggle = (t == ClassType.YMIR && n == 1 && duels.containsKey(p.getUniqueId()))
                 || (t == ClassType.AGNI && n == 2 && charges.containsKey(p.getUniqueId()));
+        if (!toggle && d.active(n)) { msg(p, t.abilityName(n) + " is still active."); return; }
         if (!toggle && d.remaining(n) > 0) {
             msg(p, t.abilityName(n) + " is on cooldown (" + String.format("%.1f", d.remaining(n)) + "s)");
             return;
         }
         d.lastAbility = n;
+        activeHints.remove(p.getUniqueId());
         boolean ok = switch (t) {
             case SHACKLED -> n == 1 ? enchain(p) : chainShot(p);
             case MOANDER -> n == 1 ? drain(p) : witherAway(p);
@@ -225,7 +258,10 @@ final class Abilities {
             case SPARTAN -> n == 1 ? MoreClasses.steed(p) : MoreClasses.spartanCharge(p);
         };
         if (ok) {
-            d.startCd(n, v(p, n, "cooldown", 30));
+            double act = activeSeconds(p, t, n);
+            Double hint = activeHints.remove(p.getUniqueId());
+            if (hint != null && cfg().getBoolean("general.cooldown-after-ability", true)) act = hint;
+            d.startCdAfter(n, act, v(p, n, "cooldown", 30));   // recharging only begins once the ability has ended
             int rep = (int) v(p, n, "armor-repair", 0);          // durability healed on every armor piece you wear
             if (rep > 0) Gear.armorDelta(p, -rep);
             Fx.cast(p, t, n);
@@ -530,7 +566,7 @@ final class Abilities {
         if (ex != null) { endDuel(ex, true); return false; }
         LivingEntity t = target(p, v(p, 1, "range", 20));
         if (!(t instanceof Player o)) { msg(p, "Look at a player to duel."); return false; }
-        double r = v(p, 1, "radius", 25);
+        double r = v(p, 1, "duel-radius", 10);
         Location c = p.getLocation().clone();
         Duel d = new Duel(p.getUniqueId(), o.getUniqueId(), c, r);
         duels.put(p.getUniqueId(), d);
@@ -553,6 +589,7 @@ final class Abilities {
         p.setWorldBorder(wb);
         o.setWorldBorder(wb);
         Fx.duelStart(c, r);
+        DuelBarrier.show(d);   // walls everybody can see
         p.sendMessage(Component.text("Forced Duel started. Press the ability again to end it.", NamedTextColor.GOLD));
         o.sendMessage(Component.text("You were pulled into a Forced Duel with " + p.getName() + "!", NamedTextColor.RED));
 
@@ -570,6 +607,7 @@ final class Abilities {
 
     static void endDuel(Duel d, boolean startCooldown) {
         if (duels.remove(d.caster()) == null) return;
+        DuelBarrier.hide(d.caster());
         for (UUID u : new UUID[]{d.caster(), d.other()}) {
             Player q = Bukkit.getPlayer(u);
             if (q != null) q.setWorldBorder(null);
@@ -897,6 +935,8 @@ final class Abilities {
         Status.overdrive.remove(u);
         applyWindburst(p, false);
         NewClasses.cleanup(p);
+        pl().pd(p).endActive(1);
+        pl().pd(p).endActive(2);
     }
 
     static void shutdown() {

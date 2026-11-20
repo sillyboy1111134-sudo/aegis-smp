@@ -36,6 +36,7 @@ final class Passives {
     static List<String> unlocked(Player p) {
         List<String> r = unlockedRaw(p);
         if (!Aegis.I.pd(p).vows.isEmpty()) r.removeIf(Vows.state(p).sacPassives::contains);
+        if (Aegis.I.pd(p).ult != null) r.removeIf(Ults.sacPassives(p)::contains);   // given up for the ultimate
         return r;
     }
 

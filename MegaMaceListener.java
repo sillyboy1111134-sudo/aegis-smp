@@ -99,7 +99,7 @@ final class MegaMaceListener implements Listener {
         // consecutive hits without touching the ground
         UUID id = p.getUniqueId();
         if (p.isOnGround()) { MegaMace.streak.remove(id); return; }
-        int need = Math.max(1, Aegis.I.getConfig().getInt("megamace.armor-hits", 3));
+        int need = Math.max(1, Aegis.I.getConfig().getInt("megamace.armor-hits", 5));
         int n = MegaMace.streak.merge(id, 1, Integer::sum);
         if (n >= need) {
             MegaMace.streak.remove(id);

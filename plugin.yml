@@ -21,6 +21,9 @@ commands:
   vow:
     description: Make a binding vow (permanent sacrifice for a permanent gain)
     usage: /vow <list|info|take|confirm|cancel|status>
+  ult:
+    description: Give up an ability and two passives for an ultimate (needs max energy)
+    usage: /ult <list|info|take|confirm|cancel|status>
   enchant:
     description: Apply Aegis custom enchants (anything else goes to vanilla /enchant)
     usage: /enchant [player] <id> [level]

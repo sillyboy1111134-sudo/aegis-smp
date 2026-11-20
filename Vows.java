@@ -28,7 +28,7 @@ import java.util.Set;
  * A vow can never be undone (only an admin can wipe them; they stay through class rerolls), and anything a vow touches is locked in.
  */
 final class Vows {
-    static final String[] IDS = {"cart", "trade", "focus", "link", "blood", "phoenix"};
+    static final String[] IDS = {"trade", "focus", "link", "blood", "phoenix"};
     static final Set<String> DAMAGE_KEYS = Set.of("damage", "beam-damage", "bonus-damage");
     static final Set<String> DURATION_KEYS = Set.of("seconds", "decoy-seconds", "freeze-seconds", "stun-seconds", "bleed-seconds",
             "window-seconds", "shield-break-seconds", "burn-seconds");
@@ -40,7 +40,7 @@ final class Vows {
         final Set<String> sacPassives = new HashSet<>();
         final Set<String> lockedPassives = new HashSet<>();       // buffed passives can never be sacrificed
         final Map<Integer, Double> dmg = new HashMap<>(), dur = new HashMap<>(), cd = new HashMap<>(), charge = new HashMap<>();
-        boolean cart, phoenix;
+        boolean phoenix;
         double heartsHp;
     }
 
@@ -57,14 +57,9 @@ final class Vows {
 
     static double heartCost() { return cfg("heart-cost-hp", 4.0); }
 
-    static NamespacedKey cartKey() { return new NamespacedKey(Aegis.I, "vow_cart"); }
-
-    static boolean isVowCart(Entity e) { return e.getPersistentDataContainer().has(cartKey(), PersistentDataType.BYTE); }
-
     // ================================================================ names / texts
     static String name(String id) {
         return switch (id) {
-            case "cart" -> "Vow of the Cart";
             case "trade" -> "Vow of Exchange";
             case "focus" -> "Vow of Focus";
             case "link" -> "Vow of Kinship";
@@ -76,7 +71,7 @@ final class Vows {
 
     static String cost(String id) {
         return switch (id) {
-            case "cart", "blood" -> "2 permanent hearts";
+            case "blood" -> "2 permanent hearts";
             case "trade", "phoenix" -> "1 of your abilities";
             case "focus" -> "2 passives";
             default -> "1 passive";   // link
@@ -85,7 +80,6 @@ final class Vows {
 
     static String gain(String id) {
         return switch (id) {
-            case "cart" -> "your TNT minecarts can explode (nobody else's can), blast capped at 5 hearts";
             case "trade" -> "the other ability gets double damage OR double duration (never above 5 hearts of damage); Agni's Fireball charges in half the time";
             case "focus" -> "one ability: -" + (int) Math.round((1 - cfg("focus-cooldown", 0.6)) * 100) + "% cooldown and +" + (int) Math.round((cfg("focus-duration", 1.5) - 1) * 100) + "% duration";
             case "link" -> "another passive becomes " + (int) Math.round((cfg("passive-buff", 1.5) - 1) * 100) + "% stronger";
@@ -165,7 +159,6 @@ final class Vows {
         for (Map.Entry<String, String> e : d.vows.entrySet()) {
             Map<String, String> pr = parse(e.getValue());
             switch (e.getKey()) {
-                case "cart" -> { s.cart = true; s.heartsHp += heartCost(); }
                 case "blood" -> { s.heartsHp += heartCost(); mul(s.cd, 1, cfg("blood-cooldown", 0.75)); mul(s.cd, 2, cfg("blood-cooldown", 0.75)); }
                 case "trade" -> {
                     int sac = toInt(pr.getOrDefault("sac", "0"), 0), buff = 3 - sac;
@@ -315,6 +308,9 @@ final class Vows {
         PlayerData d = Aegis.I.pd(p);
         ClassType t = d.type;
         if (t == null || d.rolling) return Prep.err("You need a class first.");
+        if (d.ult != null) return Prep.err("You chose an Ultimate, so you can't take binding vows.");
+        int needE = (int) cfg("min-energy", Aegis.I.maxEnergy());
+        if (d.energy < needE) return Prep.err("You need " + needE + " energy to take a binding vow.");
         if (!Arrays.asList(IDS).contains(id)) return Prep.err("Unknown vow. Use /vow list.");
         if (d.vows.containsKey(id)) return Prep.err("You already took the " + name(id) + ".");
         if (d.vows.size() >= (int) cfg("max-vows", 2)) return Prep.err("You can only take " + (int) cfg("max-vows", 2) + " vows.");
@@ -322,7 +318,7 @@ final class Vows {
         String use = "Usage: " + usage(id);
 
         switch (id) {
-            case "cart", "blood" -> {
+            case "blood" -> {
                 if (s.heartsHp + heartCost() > cfg("max-heart-sacrifice-hp", 8))
                     return Prep.err("You cannot sacrifice more than " + (int) (cfg("max-heart-sacrifice-hp", 8) / 2) + " hearts in total.");
                 return Prep.ok("", "You permanently lose " + (int) (heartCost() / 2) + " hearts.");

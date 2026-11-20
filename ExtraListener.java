@@ -230,6 +230,21 @@ final class ExtraListener implements Listener {
         if (e.getInventory().getHolder() instanceof Horse h && MoreClasses.isSteed(h)) e.setCancelled(true);
     }
 
+    /** Spartan: Shift + right-click (empty hand, spear or any non-block, non-food item) switches Air Control on / off. */
+    @EventHandler
+    public void onAirToggle(PlayerInteractEvent e) {
+        if (e.getHand() != EquipmentSlot.HAND) return;
+        if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        Player p = e.getPlayer();
+        if (!p.isSneaking()) return;
+        ItemStack it = p.getInventory().getItemInMainHand();
+        if (MegaMace.isMace(it)) return;   // the Mega Mace uses Shift + right-click for its own mode switch
+        Material m = it.getType();
+        if (!m.isAir() && (m.isBlock() || m.isEdible() || m == Material.POTION)) return;
+        if (Passives.first(p, "air-boost") == null) return;
+        MoreClasses.toggleAir(p);
+    }
+
     @EventHandler
     public void onFeather(PlayerInteractEvent e) {
         if (e.getHand() != EquipmentSlot.HAND) return;

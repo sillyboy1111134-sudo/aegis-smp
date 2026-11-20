@@ -50,7 +50,7 @@ public final class CombatListener implements Listener {
             boolean spearOk = n == null || !n.getBoolean("requires-spear", false)
                     || p.getInventory().getItemInMainHand().getType().name().endsWith("_SPEAR")
                     || p.getInventory().getItemInOffHand().getType().name().endsWith("_SPEAR");
-            if (n != null && n.getBoolean("no-fall-damage", false) && spearOk) {
+            if (n != null && n.getBoolean("no-fall-damage", false) && spearOk && !UltImpl.tremor(p)) {
                 List<String> except = n.getStringList("fall-damage-on");
                 Block b = p.getLocation().getBlock();
                 boolean hurtByBlock = except.contains(b.getType().name()) || except.contains(b.getRelative(0, -1, 0).getType().name());
@@ -88,11 +88,13 @@ public final class CombatListener implements Listener {
             double cap = pl.getConfig().getDouble("megamace.damage-cap", 10.0), f = e.getFinalDamage();
             if (f > cap) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) - (f - cap));
         }
-        // Vow of the Cart: the blast of a vow cart is capped too
-        if (e instanceof EntityDamageByEntityEvent ce && ce.getDamager() instanceof org.bukkit.entity.minecart.ExplosiveMinecart mc && Vows.isVowCart(mc)) {
-            double vcap = Vows.cap(), vf = e.getFinalDamage();
-            if (vf > vcap) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) - (vf - vcap));
+        // ultimates: Agni's domain (1.5x), Workshop tools (1.15x); Dolus' tremor ignores Feather Falling
+        if (e instanceof EntityDamageByEntityEvent um && um.getDamager() instanceof Player up2) {
+            double umult = UltImpl.damageMult(up2, v);
+            if (umult != 1.0) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) * umult);
         }
+        if (v instanceof Player tp && e.getCause() == EntityDamageEvent.DamageCause.FALL && UltImpl.tremor(tp) && e.isApplicable(DamageModifier.MAGIC))
+            e.setDamage(DamageModifier.MAGIC, 0);
         if (v instanceof Player p) {
             ConfigurationSection n = Passives.first(p, "max-damage");
             if (n != null) {
@@ -103,6 +105,9 @@ public final class CombatListener implements Listener {
         // Immortal (armor enchant): survive a killing blow
         if (v instanceof Player ip && e.getCause() != EntityDamageEvent.DamageCause.VOID
                 && ip.getHealth() - e.getFinalDamage() <= 0 && CustomEnchantListener.tryImmortal(ip)) e.setCancelled(true);
+        // Ultimates that trigger on a killing blow: Fateweaver's lives, Berserker's Defiant Rage
+        if (!e.isCancelled() && v instanceof Player ur && e.getCause() != EntityDamageEvent.DamageCause.VOID
+                && ur.getHealth() - e.getFinalDamage() <= 0 && UltImpl.tryRevive(ur)) e.setCancelled(true);
         // Vow of the Phoenix: survive a killing blow
         if (!e.isCancelled() && v instanceof Player ph && e.getCause() != EntityDamageEvent.DamageCause.VOID
                 && ph.getHealth() - e.getFinalDamage() <= 0 && Vows.tryPhoenix(ph)) e.setCancelled(true);

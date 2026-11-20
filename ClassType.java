@@ -95,6 +95,7 @@ public enum ClassType {
 
     public static ClassType byId(String s) {
         for (ClassType t : values()) if (t.id.equalsIgnoreCase(s) || t.name().equalsIgnoreCase(s)) return t;
+        if ("azeroth".equalsIgnoreCase(s)) return AZAROTH;   // both spellings work
         return null;
     }
 }

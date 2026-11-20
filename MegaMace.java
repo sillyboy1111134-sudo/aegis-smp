@@ -92,7 +92,7 @@ final class MegaMace {
         lore.add(line("Mode: " + (breach ? "Breach " : "Density ") + lvl, breach ? NamedTextColor.RED : NamedTextColor.AQUA));
         lore.add(line("Shift + Right-click: switch Breach / Density", NamedTextColor.GRAY));
         lore.add(line("F: dash " + (int) cfg("dash-distance", 10) + " blocks", NamedTextColor.GRAY));
-        lore.add(line((int) cfg("armor-hits", 3) + " airborne hits: -" + (int) cfg("armor-durability", 80) + " durability on each armor piece", NamedTextColor.GRAY));
+        lore.add(line((int) cfg("armor-hits", 5) + " airborne hits: -" + (int) cfg("armor-durability", 80) + " durability on each armor piece", NamedTextColor.GRAY));
         lore.add(line("Sword attack speed, breaks shields like an axe", NamedTextColor.GRAY));
         lore.add(line("Damage cap: " + (cfg("damage-cap", 10.0) / 2.0) + " hearts per hit", NamedTextColor.GRAY));
         m.lore(lore);
@@ -136,27 +136,25 @@ final class MegaMace {
             return;
         }
         final int steps = 5;
-        final double stepLen = cfg("dash-distance", 10) / steps;
+        final double perTick = cfg("dash-distance", 10) / steps;   // blocks per tick, 5 ticks = the dash distance
+        final double carry = cfg("dash-carry", 0.5);               // share of the dash speed you keep afterwards
         final Vector dir = p.getEyeLocation().getDirection().normalize();
         d.startKey("megamace_dash", cfg("dash-cooldown", 5));
         p.getWorld().playSound(p.getLocation(), "entity.wind_charge.wind_burst", 1f, 1f);
         new BukkitRunnable() {
             int i = 0;
             @Override public void run() {
-                if (!p.isOnline() || p.isDead() || i >= steps) { cancel(); return; }
-                Location cur = p.getLocation();
-                Location mid = cur.clone().add(dir.clone().multiply(stepLen / 2));
-                Location next = cur.clone().add(dir.clone().multiply(stepLen));
-                if (!free(mid) || !free(next)) { cancel(); return; }   // stops at walls
-                p.teleport(next);
-                Fx.part(next.clone().add(0, 1, 0), Particle.CLOUD, 5, .3, .4, .3, .02);
+                if (!p.isOnline() || p.isDead()) { cancel(); return; }
+                if (i >= steps) {
+                    p.setVelocity(dir.clone().multiply(perTick * carry));   // keeps your momentum instead of stopping dead
+                    cancel();
+                    return;
+                }
+                p.setVelocity(dir.clone().multiply(perTick));               // normal collisions, so walls stop you naturally
+                Fx.part(p.getLocation().add(0, 1, 0), Particle.CLOUD, 5, .3, .4, .3, .02);
                 i++;
             }
         }.runTaskTimer(Aegis.I, 0, 1);
-    }
-
-    private static boolean free(Location l) {
-        return l.getBlock().isPassable() && l.clone().add(0, 1, 0).getBlock().isPassable();
     }
 
     // ---------------------------------------------------------------- armor shred

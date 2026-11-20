@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.title.Title;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -28,6 +29,7 @@ final class VowCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String label, String[] a) {
+        if (a.length >= 1 && a[0].equalsIgnoreCase("remove")) { remove(s, a); return true; }
         if (!(s instanceof Player p)) { s.sendMessage("Players only."); return true; }
         if (!Aegis.I.getConfig().getBoolean("vows.enabled", true)) { say(p, "Binding vows are disabled.", NamedTextColor.RED); return true; }
         String sub = a.length == 0 ? "list" : a[0].toLowerCase();
@@ -44,6 +46,25 @@ final class VowCommand implements CommandExecutor, TabCompleter {
             default -> say(p, "/vow <list|info|take|confirm|cancel|status>", NamedTextColor.RED);
         }
         return true;
+    }
+
+    /** Admin: /vow remove <player> [vow]  (no vow = remove all of them). */
+    private void remove(CommandSender s, String[] a) {
+        if (!s.hasPermission("aegis.admin")) { s.sendMessage(Component.text("No permission.", NamedTextColor.RED)); return; }
+        if (a.length < 2) { s.sendMessage(Component.text("/vow remove <player> [vow]", NamedTextColor.RED)); return; }
+        Player t = Bukkit.getPlayerExact(a[1]);
+        if (t == null) { s.sendMessage(Component.text("Player not online.", NamedTextColor.RED)); return; }
+        PlayerData td = Aegis.I.pd(t);
+        if (a.length >= 3) {
+            if (td.vows.remove(a[2].toLowerCase()) == null) { s.sendMessage(Component.text(t.getName() + " has no " + a[2] + " vow.", NamedTextColor.RED)); return; }
+        } else {
+            td.vows.clear();
+        }
+        td.vowState = null;
+        Passives.refresh(t);
+        Aegis.I.saveData();
+        s.sendMessage(Component.text("Removed " + (a.length >= 3 ? "the " + a[2] + " vow" : "all binding vows") + " from " + t.getName() + ".", NamedTextColor.GREEN));
+        t.sendMessage(Component.text("An admin lifted your binding vow" + (a.length >= 3 ? "." : "s."), NamedTextColor.GRAY));
     }
 
     private void list(Player p) {
@@ -98,9 +119,15 @@ final class VowCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         List<String> out = new ArrayList<>();
-        if (!(s instanceof Player p)) return out;
         String cur = a.length == 0 ? "" : a[a.length - 1].toLowerCase();
-        if (a.length == 1) out.addAll(List.of("list", "info", "take", "confirm", "cancel", "status"));
+        if (a.length >= 1 && a[0].equalsIgnoreCase("remove") && s.hasPermission("aegis.admin")) {
+            if (a.length == 2) for (Player o : Bukkit.getOnlinePlayers()) out.add(o.getName());
+            else if (a.length == 3) { Player t = Bukkit.getPlayerExact(a[1]); if (t != null) out.addAll(Aegis.I.pd(t).vows.keySet()); }
+            out.removeIf(x -> !x.toLowerCase().startsWith(cur));
+            return out;
+        }
+        if (!(s instanceof Player p)) return out;
+        if (a.length == 1) { out.addAll(List.of("list", "info", "take", "confirm", "cancel", "status")); if (s.hasPermission("aegis.admin")) out.add("remove"); }
         else if (a[0].equalsIgnoreCase("info") && a.length == 2) out.addAll(Arrays.asList(Vows.IDS));
         else if (a[0].equalsIgnoreCase("take")) {
             if (a.length == 2) out.addAll(Arrays.asList(Vows.IDS));

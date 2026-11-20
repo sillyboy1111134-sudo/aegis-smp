@@ -24,6 +24,7 @@ general:
   all-damage-true: false            # true = EVERY hit (melee, arrows, explosions...) ignores armor, not just abilities
   true-damage-ignores-enchants: true  # true damage also ignores protection-type enchantments (Protection, Blast Prot...). Resistance effects and absorption hearts still work
   abilities-ignore-armor: true      # ABILITY damage is true damage (ignores armor)
+  cooldown-after-ability: true      # cooldowns only start recharging once the ability has ended (duration abilities)
   strong-hit-threshold: 0.9         # attack-cooldown needed for passives to proc (blocks weak-hit procs)
   assign-class-on-first-join: true  # first join plays the slot-machine roll
   default-command-mode: false       # false = F / Shift+F, true = /ability 1 /ability 2
@@ -232,7 +233,7 @@ classes:
 
   # ---------------------------------------------------------------- YMIR
   ymir:
-    a1: {armor-damage: 0, armor-repair: 0, cooldown: 120, range: 20, radius: 25, max-seconds: 0}   # max-seconds 0 = until death / re-press
+    a1: {armor-damage: 0, armor-repair: 0, cooldown: 120, range: 20, duel-radius: 10, max-seconds: 0}   # duel-radius 10 = 20x20 arena with walls everyone can see; max-seconds 0 = until death / re-press
     a2: {armor-damage: 0, armor-repair: 0, cooldown: 60, seconds: 5}
     passives:
       resist: {permanent-effects: ["resistance:1"]}
@@ -453,13 +454,14 @@ classes:
 
   # ---------------------------------------------------------------- FATEWEAVER
   fateweaver:
-    a1:                      # Weave of Fate: you and your target share damage (armor stands work too)
+    a1:                      # Weave of Fate: use it once to mark an entity, use it again on a second entity to link the two (they share damage; armor stands work too)
       armor-damage: 0
       armor-repair: 0
       cooldown: 60
       seconds: 20
       range: 30
-      max-distance: 50       # the thread snaps when you get further apart than this
+      mark-seconds: 30       # how long the first mark waits for the second use
+      max-distance: 50       # the thread snaps when the two are further apart than this
     a2:                      # Web We Weave: destroys every cobweb around you
       armor-damage: 0
       armor-repair: 0
@@ -521,11 +523,11 @@ classes:
       knockback: 1.1
       shield-break-seconds: 20
     passives:                # one unlocks per energy: 0E, 1E, 2E, 3E, 4E, 5E
-      netherite: {diamond-to-netherite: true}                   # diamond spears in your inventory become netherite
+      netherite: {netherite-upgrade: [SPEAR]}                   # netherite spears are allowed (the gear rule turns everyone else's back into diamond)
       speed: {permanent-effects: ["speed:1"], permanent-effects-max-energy: ["speed:2"]}
       fall: {no-fall-damage: true, requires-spear: true, fall-damage-on: [POINTED_DRIPSTONE]}
       feather: {feather-dash-cooldown: 30, feather-dash-speed: 1.4}   # right-click a feather to dash
-      air: {air-boost: 1.07, max-speed: 0.7}                    # keeps your momentum in the air
+      air: {air-boost: 1.07, max-speed: 0.7}                    # keeps your momentum in the air; Shift + right-click switches it on / off
       shield: {shield-break-speed: 10, shield-cooldown: 5}      # spear hits above 10 blocks/s break shields for 5s
 
 # ---------------------------------------------------------------- MEGA MACE (legendary weapon, only one can ever be crafted)
@@ -538,8 +540,9 @@ megamace:
   damage-cap: 10.0            # max HP per hit with the mace (10 = 5 hearts)
   dash-distance: 10
   dash-cooldown: 5            # seconds between F dashes
+  dash-carry: 0.5             # after the dash you keep this share of the dash speed (0 = stop dead)
   shield-disable-seconds: 5   # like an axe
-  armor-hits: 3               # consecutive hits without touching the ground...
+  armor-hits: 5               # consecutive hits without touching the ground...
   armor-durability: 80        # ...damage this much durability on every armor piece
 
 # ---------------------------------------------------------------- BINDING VOWS  (/vow list)
@@ -547,6 +550,7 @@ megamace:
 vows:
   enabled: true
   max-vows: 2                    # per player
+  min-energy: 5                  # energy needed to take a vow (max energy)
   heart-cost-hp: 4               # "2 hearts" = 4 HP
   max-heart-sacrifice-hp: 8      # most health a player can ever give up (4 hearts)
   damage-cap: 10.0               # vows never push an ability past this per hit (10 = 5 hearts)
@@ -557,4 +561,21 @@ vows:
   min-cooldown-mult: 0.5         # cooldowns never drop below half
   phoenix-cooldown: 900          # seconds
   phoenix-hearts: 3
+
+# ---------------------------------------------------------------- ULTIMATES  (/ult list)
+# At max energy a player can give up 1 ability and 2 passives for an ultimate from ANY class.
+# Ultimates and binding vows exclude each other. The ultimates themselves are added later;
+# per-ultimate settings go under ults.<id> (e.g. ults.<id>.cooldown overrides its cooldown).
+ults:
+  enabled: true
+  # Every ultimate can be tuned here, e.g.  ults.bloodbath.radius / .seconds / .cooldown  (defaults are in the code).
+  # Ultimates: bloodbath (Icor), indomitable (Ymir), tides (Varuna), hell (Agni), workshop (Hephaestus), skyruler (Boreus),
+  #   guardian (Azaroth), goldengod (Midas), shadows (Rogue), idolgamble (Jackpot), avoidance (Fateweaver),
+  #   supremesingularity (Singularity), areswrath (Spartan), flowtime (Chrono), desolation (Moander),
+  #   tremor (Dolus), worldtree (Yggdrasil), chains (Shackled), defiantrage (Berserker), swordgod (Samurai)
+  idolgamble:
+    start-chance: 1            # jackpot chance of the first spin (percent) ...
+    chance-step: 1             # ... grows by this much with every spin ...
+    max-chance: 7              # ... up to this
+    schematic: casino.schem    # put your casino schematic (WorldEdit / Sponge .schem) in plugins/AegisSMP/ ; a small placeholder casino is used without it
 

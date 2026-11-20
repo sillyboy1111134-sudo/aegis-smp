@@ -46,6 +46,8 @@ final class MoreClasses {
     static final Map<UUID, Long> noEffects = new HashMap<>();      // potion effects switched off
     // Fateweaver
     static final Map<UUID, UUID> links = new HashMap<>();          // both directions
+    static final Map<UUID, UUID> marks = new HashMap<>();          // caster -> entity marked for the next Weave of Fate
+    static final Map<UUID, Long> markEnd = new HashMap<>();
     static boolean mirroring = false;
     // Singularity
     static final Map<UUID, Boolean> slam = new HashMap<>();
@@ -63,6 +65,19 @@ final class MoreClasses {
 
     static double speedOf(Player p) { return speed.getOrDefault(p.getUniqueId(), 0.0); }
 
+    // Spartan: the air-momentum passive can be switched on and off (stored on the player, survives restarts)
+    private static NamespacedKey airKey() { return new NamespacedKey(Aegis.I, "air_control_off"); }
+
+    static boolean airOff(Player p) { return p.getPersistentDataContainer().has(airKey(), PersistentDataType.BYTE); }
+
+    static void toggleAir(Player p) {
+        boolean nowOff;
+        if (airOff(p)) { p.getPersistentDataContainer().remove(airKey()); nowOff = false; }
+        else { p.getPersistentDataContainer().set(airKey(), PersistentDataType.BYTE, (byte) 1); nowOff = true; }
+        p.sendActionBar(Component.text("Air Control: " + (nowOff ? "OFF" : "ON"), nowOff ? NamedTextColor.RED : NamedTextColor.GREEN));
+        p.getWorld().playSound(p.getLocation(), "ui.button.click", 0.7f, nowOff ? 0.8f : 1.4f);
+    }
+
     // ================================================================ ticker
     static void startTicker() {
         new BukkitRunnable() {
@@ -74,6 +89,7 @@ final class MoreClasses {
     private static void tickAll(int c) {
         for (Player p : Bukkit.getOnlinePlayers()) {
             MegaMace.tick(p);
+            UltImpl.tick(p, c);
             ClassType t = Aegis.I.pd(p).type;
             if (t == null) continue;
             switch (t) {
@@ -142,6 +158,7 @@ final class MoreClasses {
         st[1]--;
         if (st[1] <= 0) {
             luck.remove(p.getUniqueId());
+            Aegis.I.pd(p).endActive(st.length > 2 ? st[2] : 1);   // the lucky hits are used up: the cooldown starts now
             p.sendActionBar(Component.text("Your luck ran out.", NamedTextColor.GRAY));
         } else {
             p.sendActionBar(Component.text(st[1] + " lucky hits left", NamedTextColor.GOLD));
@@ -154,10 +171,10 @@ final class MoreClasses {
         double sec = Abilities.secs(p, Abilities.v(p, 1, "seconds", 10));
         UUID id = p.getUniqueId();
         switch (ThreadLocalRandom.current().nextInt(4)) {
-            case 0 -> { luck.put(id, new int[]{1, hits}); say(p, "LUCKY! Your next " + hits + " hits deal DOUBLE damage.", NamedTextColor.GOLD); }
-            case 1 -> { luck.put(id, new int[]{2, hits}); say(p, "Unlucky... your next " + hits + " hits deal HALF damage.", NamedTextColor.RED); }
-            case 2 -> { doubleEffects(p, sec); say(p, "LUCKY! Your potion effect levels are doubled for " + (int) sec + "s.", NamedTextColor.GOLD); }
-            default -> { wipeEffects(p, sec); say(p, "Unlucky... your potion effects are gone for " + (int) sec + "s.", NamedTextColor.RED); }
+            case 0 -> { luck.put(id, new int[]{1, hits, 1}); Abilities.activeHint(p, 120); say(p, "LUCKY! Your next " + hits + " hits deal DOUBLE damage.", NamedTextColor.GOLD); }
+            case 1 -> { luck.put(id, new int[]{2, hits, 1}); Abilities.activeHint(p, 120); say(p, "Unlucky... your next " + hits + " hits deal HALF damage.", NamedTextColor.RED); }
+            case 2 -> { doubleEffects(p, sec); Abilities.activeHint(p, sec); say(p, "LUCKY! Your potion effect levels are doubled for " + (int) sec + "s.", NamedTextColor.GOLD); }
+            default -> { wipeEffects(p, sec); Abilities.activeHint(p, sec); say(p, "Unlucky... your potion effects are gone for " + (int) sec + "s.", NamedTextColor.RED); }
         }
         p.getWorld().playSound(p.getLocation(), "block.note_block.bell", 1f, 1.2f);
         return true;
@@ -165,7 +182,8 @@ final class MoreClasses {
 
     static boolean highRoller(Player p) {
         int hits = (int) Abilities.v(p, 2, "hits", 5);
-        luck.put(p.getUniqueId(), new int[]{3, hits});
+        luck.put(p.getUniqueId(), new int[]{3, hits, 2});
+        Abilities.activeHint(p, 120);
         say(p, "High Roller! Your next " + hits + " hits: 50% double damage, 50% no damage.", NamedTextColor.GOLD);
         p.getWorld().playSound(p.getLocation(), "block.note_block.bell", 1f, 0.8f);
         return true;
@@ -197,13 +215,21 @@ final class MoreClasses {
 
     private static void wipeEffects(Player p, double sec) {
         Status.set(noEffects, p, sec);
-        for (PotionEffect e : new ArrayList<>(p.getActivePotionEffects())) p.removePotionEffect(e.getType());
+        final List<PotionEffect> saved = new ArrayList<>(p.getActivePotionEffects());
+        for (PotionEffect e : saved) p.removePotionEffect(e.getType());
+        final long ticks = (long) (sec * 20) + 1L;
         UUID id = p.getUniqueId();
         Bukkit.getScheduler().runTaskLater(Aegis.I, () -> {
             noEffects.remove(id);
             Player q = Bukkit.getPlayer(id);
-            if (q != null) Passives.refresh(q);
-        }, (long) (sec * 20) + 1L);
+            if (q == null || q.isDead()) return;
+            Passives.refresh(q);   // permanent effects
+            for (PotionEffect e : saved) {   // everything that was taken away comes back with the time it had left
+                if (e.isInfinite()) continue;
+                long left = e.getDuration() - ticks;
+                if (left > 0) q.addPotionEffect(new PotionEffect(e.getType(), (int) left, e.getAmplifier(), e.isAmbient(), e.hasParticles(), e.hasIcon()));
+            }
+        }, ticks);
     }
 
     // ================================================================ FATEWEAVER
@@ -241,30 +267,69 @@ final class MoreClasses {
         if (b != null) links.remove(b);
     }
 
+    /** First use marks the entity you look at; the next use links the marked entity with the one you look at. */
     static boolean weaveOfFate(Player p) {
-        LivingEntity t = targetAny(p, Abilities.v(p, 1, "range", 30));
-        if (t == null) { Abilities.msg(p, "No target in sight."); return false; }
-        final UUID pid = p.getUniqueId(), tid = t.getUniqueId();
-        unlink(pid);
-        unlink(tid);
-        links.put(pid, tid);
-        links.put(tid, pid);
-        final long end = System.currentTimeMillis() + (long) (Abilities.secs(p, Abilities.v(p, 1, "seconds", 20)) * 1000);
-        final double maxDist = Abilities.v(p, 1, "max-distance", 50);
-        say(p, "A thread of fate binds you to " + (t instanceof Player tp ? tp.getName() : "your target") + ".", NamedTextColor.LIGHT_PURPLE);
+        final UUID pid = p.getUniqueId();
+        LivingEntity looked = targetAny(p, Abilities.v(p, 1, "range", 30));
+        LivingEntity marked = null;
+        UUID mid = marks.get(pid);
+        if (mid != null) {
+            Entity me = Bukkit.getEntity(mid);
+            if (me instanceof LivingEntity le && le.isValid() && System.currentTimeMillis() < markEnd.getOrDefault(pid, 0L)) marked = le;
+            else { marks.remove(pid); markEnd.remove(pid); }
+        }
+        if (marked == null) {
+            if (looked == null) { Abilities.msg(p, "Look at an entity to mark it."); return false; }
+            marks.put(pid, looked.getUniqueId());
+            markEnd.put(pid, System.currentTimeMillis() + (long) (Abilities.v(p, 1, "mark-seconds", 30) * 1000));
+            say(p, "Marked " + looked.getName() + ". Use Weave of Fate again on a second entity to link them.", NamedTextColor.LIGHT_PURPLE);
+            showMark(pid, looked.getUniqueId());
+            return false;   // no cooldown until the thread is tied
+        }
+        if (looked == null) { Abilities.msg(p, "Look at a second entity to link with " + marked.getName() + "."); return false; }
+        if (looked.getUniqueId().equals(marked.getUniqueId())) { Abilities.msg(p, "Pick a different entity to link."); return false; }
+        marks.remove(pid);
+        markEnd.remove(pid);
+        link(p, marked, looked);
+        return true;
+    }
+
+    /** Purple sparkles above the marked entity until the mark is used or runs out. */
+    private static void showMark(UUID pid, UUID target) {
         new BukkitRunnable() {
             @Override public void run() {
-                Entity a = Bukkit.getEntity(pid), b = Bukkit.getEntity(tid);
-                boolean linked = tid.equals(links.get(pid));
-                if (!linked || a == null || b == null || !a.isValid() || !b.isValid() || System.currentTimeMillis() > end
-                        || !a.getWorld().equals(b.getWorld()) || a.getLocation().distance(b.getLocation()) > maxDist) {
-                    if (linked) unlink(pid);
-                    if (a instanceof Player q) q.sendActionBar(Component.text("The thread of fate snaps.", NamedTextColor.LIGHT_PURPLE));
+                Entity e = Bukkit.getEntity(target);
+                if (!target.equals(marks.get(pid)) || e == null || !e.isValid() || System.currentTimeMillis() > markEnd.getOrDefault(pid, 0L)) { cancel(); return; }
+                Location top = e.getLocation().add(0, e.getHeight() + 0.5, 0);
+                Fx.dust(top, 4, .25, 0xD39BFF, 1.3f);
+                Fx.part(top, Particle.WITCH, 3, .2, .2, .2, 0);
+            }
+        }.runTaskTimer(Aegis.I, 0, 8);
+    }
+
+    private static void link(Player p, LivingEntity a, LivingEntity b) {
+        final UUID pid = p.getUniqueId(), ida = a.getUniqueId(), idb = b.getUniqueId();
+        unlink(ida);
+        unlink(idb);
+        links.put(ida, idb);
+        links.put(idb, ida);
+        final long end = System.currentTimeMillis() + (long) (Abilities.secs(p, Abilities.v(p, 1, "seconds", 20)) * 1000);
+        final double maxDist = Abilities.v(p, 1, "max-distance", 50);
+        say(p, "A thread of fate now binds " + a.getName() + " and " + b.getName() + ".", NamedTextColor.LIGHT_PURPLE);
+        new BukkitRunnable() {
+            @Override public void run() {
+                Entity x = Bukkit.getEntity(ida), y = Bukkit.getEntity(idb);
+                boolean linked = idb.equals(links.get(ida));
+                if (!linked || x == null || y == null || !x.isValid() || !y.isValid() || System.currentTimeMillis() > end
+                        || !x.getWorld().equals(y.getWorld()) || x.getLocation().distance(y.getLocation()) > maxDist) {
+                    if (linked) unlink(ida);
+                    Player q = Bukkit.getPlayer(pid);
+                    if (q != null) q.sendActionBar(Component.text("The thread of fate snaps.", NamedTextColor.LIGHT_PURPLE));
                     cancel();
                     return;
                 }
-                Location from = a instanceof LivingEntity la ? la.getEyeLocation().subtract(0, 0.4, 0) : a.getLocation();
-                Location to = b.getLocation().add(0, b.getHeight() / 2, 0);
+                Location from = x.getLocation().add(0, x.getHeight() / 2, 0);
+                Location to = y.getLocation().add(0, y.getHeight() / 2, 0);
                 Vector v = to.toVector().subtract(from.toVector());
                 double len = v.length();
                 if (len > 0.1) {
@@ -274,7 +339,6 @@ final class MoreClasses {
                 }
             }
         }.runTaskTimer(Aegis.I, 1, 4);
-        return true;
     }
 
     static boolean webWeave(Player p) {
@@ -323,7 +387,7 @@ final class MoreClasses {
             double lastY = p.getLocation().getY();
             boolean down = false;
             @Override public void run() {
-                if (!p.isOnline() || p.isDead() || t > 200) { slam.remove(id); cancel(); return; }
+                if (!p.isOnline() || p.isDead() || t > 200) { slam.remove(id); Aegis.I.pd(p).endActive(1); cancel(); return; }
                 Location l = p.getLocation();
                 if (!down) {
                     if (t > 5 && l.getY() <= lastY + 0.01) down = true;   // reached the top
@@ -348,6 +412,7 @@ final class MoreClasses {
     }
 
     private static void starImpact(Player p) {
+        Aegis.I.pd(p).endActive(1);   // Starfall is over: the cooldown starts now
         Location at = p.getLocation();
         World w = at.getWorld();
         double radius = Abilities.v(p, 1, "radius", 6), dmg = Abilities.v(p, 1, "damage", 6.0), power = Abilities.v(p, 1, "explosion-power", 4);
@@ -427,29 +492,18 @@ final class MoreClasses {
         UUID id = p.getUniqueId();
         Location now = p.getLocation();
         Location prev = lastPos.put(id, now);
-        if (c % 20 == 0 && Passives.first(p, "diamond-to-netherite") != null) upgradeSpears(p);
         if (prev == null || !prev.getWorld().equals(now.getWorld())) { speed.put(id, 0.0); return; }
         double dx = now.getX() - prev.getX(), dy = now.getY() - prev.getY(), dz = now.getZ() - prev.getZ();
         speed.put(id, Math.sqrt(dx * dx + dy * dy + dz * dz) * 20.0);
 
         ConfigurationSection n = Passives.first(p, "air-boost");
-        if (n == null) return;
+        if (n == null || airOff(p)) return;
         if (p.isOnGround() || p.isGliding() || p.isInWater() || p.isInsideVehicle() || p.isFlying()) return;
         double h = Math.sqrt(dx * dx + dz * dz);
         if (h < 0.06 || h > n.getDouble("max-speed", 0.7)) return;
         double mul = n.getDouble("air-boost", 1.07);
         // keeps your air momentum (normal air drag is 0.91 per tick) so you glide further and steer more easily
         p.setVelocity(new Vector(dx * 0.91 * mul, (dy - 0.08) * 0.98, dz * 0.91 * mul));
-    }
-
-    private static void upgradeSpears(Player p) {
-        Material nz = Material.matchMaterial("NETHERITE_SPEAR");
-        if (nz == null) return;
-        PlayerInventory inv = p.getInventory();
-        for (int i = 0; i < 41; i++) {
-            ItemStack s = inv.getItem(i);
-            if (s != null && s.getType().name().equals("DIAMOND_SPEAR")) inv.setItem(i, s.withType(nz));
-        }
     }
 
     private static void setAttr(LivingEntity e, Attribute a, double v) {
@@ -520,6 +574,8 @@ final class MoreClasses {
         luck.remove(id);
         noEffects.remove(id);
         unlink(id);
+        marks.remove(id);
+        markEnd.remove(id);
         slam.remove(id);
         safe.remove(id);
         lastPos.remove(id);

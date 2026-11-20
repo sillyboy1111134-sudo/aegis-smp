@@ -37,7 +37,7 @@ public final class Aegis extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new CustomEnchantListener(), this);
         getServer().getPluginManager().registerEvents(new ExtraListener(), this);
         getServer().getPluginManager().registerEvents(new MegaMaceListener(), this);
-        getServer().getPluginManager().registerEvents(new VowListener(), this);
+        getServer().getPluginManager().registerEvents(new UltListener(), this);
         MegaMace.load();
         MegaMace.register();
         MoreClasses.startTicker();
@@ -50,6 +50,9 @@ public final class Aegis extends JavaPlugin {
         }
         PluginCommand vowCmd = getCommand("vow");
         if (vowCmd != null) { VowCommand vc = new VowCommand(); vowCmd.setExecutor(vc); vowCmd.setTabCompleter(vc); }
+        PluginCommand ultCmd = getCommand("ult");
+        if (ultCmd != null) { UltCommand uc = new UltCommand(); ultCmd.setExecutor(uc); ultCmd.setTabCompleter(uc); }
+        Ults.init();
         Recipes.register();
         Tasks.start();
         for (Player p : Bukkit.getOnlinePlayers()) { Status.clearMods(p); Passives.refresh(p); }
@@ -98,6 +101,9 @@ public final class Aegis extends JavaPlugin {
                 for (String t : s.getStringList(key + ".trusted")) d.trusted.add(UUID.fromString(t));
                 ConfigurationSection vs = s.getConfigurationSection(key + ".vows");
                 if (vs != null) for (String vid : vs.getKeys(false)) d.vows.put(vid, vs.getString(vid, ""));
+                d.ult = s.getString(key + ".ult.id", null);
+                d.ultSlot = s.getInt(key + ".ult.slot", 0);
+                d.ultSac = s.getString(key + ".ult.sac", "");
                 data.put(id, d);
             } catch (Exception ignored) { }
         }
@@ -115,6 +121,7 @@ public final class Aegis extends JavaPlugin {
             for (UUID u : d.trusted) t.add(u.toString());
             y.set(k + ".trusted", t);
             for (Map.Entry<String, String> v : d.vows.entrySet()) y.set(k + ".vows." + v.getKey(), v.getValue());
+            if (d.ult != null) { y.set(k + ".ult.id", d.ult); y.set(k + ".ult.slot", d.ultSlot); y.set(k + ".ult.sac", d.ultSac); }
         }
         try { getDataFolder().mkdirs(); y.save(dataFile); } catch (IOException ex) { getLogger().warning("Could not save data.yml: " + ex.getMessage()); }
     }
