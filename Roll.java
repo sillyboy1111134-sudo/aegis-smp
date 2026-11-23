@@ -63,7 +63,6 @@ final class Roll {
         Status.clear(p);
         d.cd.clear();
         d.type = t;
-        d.vowState = null;    // vows stay; they are re-applied to the new class's ability / passive slots
         Passives.refresh(p);
 
         if (p.isOnline()) {

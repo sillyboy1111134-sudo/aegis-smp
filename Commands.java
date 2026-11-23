@@ -89,6 +89,9 @@ final class Commands implements CommandExecutor, TabCompleter {
         ClassType t = d.type;
         say(p, t.display + "  \u26A1 " + d.energy + "/" + pl.maxEnergy(), NamedTextColor.GOLD);
         say(p, "Ability 1: " + t.a1 + (t.a2 == null ? "" : "   Ability 2: " + t.a2), NamedTextColor.YELLOW);
+        Ults.Def ud = Ults.of(t);
+        if (ud != null) say(p, "Ultimate: " + ud.name() + (d.awakened ? (d.energy >= pl.maxEnergy() ? "  (awakened, ready)" : "  (awakened, needs max energy)") : "  (not awakened - Awakening Stone)"),
+                d.awakened ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.DARK_GRAY);
         for (int i = 0; i < t.passives.length; i++) {
             int need = Passives.unlockAt(t, i);
             boolean on = d.energy >= need;
@@ -161,15 +164,16 @@ final class Commands implements CommandExecutor, TabCompleter {
         if (!s.hasPermission("aegis.admin")) { say(s, "No permission.", NamedTextColor.RED); return true; }
         if (a.length == 0) { say(s, "/aegis <give|setclass|setenergy|enchant|reload>", NamedTextColor.RED); return true; }
         switch (a[0].toLowerCase()) {
-            case "reload" -> { pl.reloadConfig(); Recipes.register(); MegaMace.register(); Vows.invalidate(); say(s, "Config reloaded.", NamedTextColor.GREEN); }
+            case "reload" -> { pl.reloadConfig(); Recipes.register(); MegaMace.register(); say(s, "Config reloaded.", NamedTextColor.GREEN); }
             case "give" -> {
-                if (a.length < 3) { say(s, "/aegis give <player> <marble|reroller> [amount]", NamedTextColor.RED); return true; }
+                if (a.length < 3) { say(s, "/aegis give <player> <marble|reroller|stone> [amount]", NamedTextColor.RED); return true; }
                 Player t = Bukkit.getPlayerExact(a[1]);
                 if (t == null) { say(s, "Player not online.", NamedTextColor.RED); return true; }
-                String kind = a[2].equalsIgnoreCase("reroller") || a[2].equalsIgnoreCase("reroll") ? "reroll" : "energy";
+                String kind = a[2].equalsIgnoreCase("reroller") || a[2].equalsIgnoreCase("reroll") ? "reroll"
+                        : (a[2].equalsIgnoreCase("stone") || a[2].equalsIgnoreCase("awakening") || a[2].equalsIgnoreCase("awakeningstone")) ? "awakening" : "energy";
                 int amt = a.length > 3 ? Math.max(1, Integer.parseInt(a[3])) : 1;
                 t.getInventory().addItem(Items.make(kind, amt)).values().forEach(x -> t.getWorld().dropItemNaturally(t.getLocation(), x));
-                say(s, "Gave " + amt + " " + (kind.equals("energy") ? "Energy Marble(s)" : "Class Reroller(s)") + " to " + t.getName(), NamedTextColor.GREEN);
+                say(s, "Gave " + amt + " " + (kind.equals("energy") ? "Energy Marble(s)" : kind.equals("awakening") ? "Awakening Stone(s)" : "Class Reroller(s)") + " to " + t.getName(), NamedTextColor.GREEN);
             }
             case "setclass" -> {
                 if (a.length < 3) { say(s, "/aegis setclass <player> <class>", NamedTextColor.RED); return true; }
@@ -219,21 +223,7 @@ final class Commands implements CommandExecutor, TabCompleter {
                     say(s, "/aegis megamace <give [player]|reset>", NamedTextColor.RED);
                 }
             }
-            case "vow" -> {
-                if (a.length >= 3 && a[1].equalsIgnoreCase("clear")) {
-                    Player t = Bukkit.getPlayerExact(a[2]);
-                    if (t == null) { say(s, "Player not online.", NamedTextColor.RED); return true; }
-                    PlayerData td = pl.pd(t);
-                    td.vows.clear();
-                    td.vowState = null;
-                    Passives.refresh(t);
-                    pl.saveData();
-                    say(s, "Cleared " + t.getName() + "'s binding vows.", NamedTextColor.GREEN);
-                } else {
-                    say(s, "/aegis vow clear <player>", NamedTextColor.RED);
-                }
-            }
-            default -> say(s, "/aegis <give|setclass|setenergy|enchant|megamace|vow|reload>", NamedTextColor.RED);
+            default -> say(s, "/aegis <give|setclass|setenergy|enchant|megamace|reload>", NamedTextColor.RED);
         }
         return true;
     }
@@ -262,9 +252,9 @@ final class Commands implements CommandExecutor, TabCompleter {
                 }
             } else if (a.length == 3 && CE.def(a[1]) != null) levels(out, a[1]);
         } else if (name.equals("aegis")) {
-            if (a.length == 1) out.addAll(List.of("give", "setclass", "setenergy", "enchant", "megamace", "vow", "reload"));
+            if (a.length == 1) out.addAll(List.of("give", "setclass", "setenergy", "enchant", "megamace", "reload"));
             else if (a.length == 2) { if (a[0].equalsIgnoreCase("enchant")) CE.DEFS.forEach(d -> out.add(d.id())); else Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName())); }
-            else if (a.length == 3 && a[0].equalsIgnoreCase("give")) out.addAll(List.of("marble", "reroller"));
+            else if (a.length == 3 && a[0].equalsIgnoreCase("give")) out.addAll(List.of("marble", "reroller", "stone"));
             else if (a.length == 3 && a[0].equalsIgnoreCase("setclass")) for (ClassType t : ClassType.values()) out.add(t.id);
         }
         String last = a.length == 0 ? "" : a[a.length - 1].toLowerCase();

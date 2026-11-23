@@ -189,6 +189,8 @@ public final class UtilityListener implements Listener {
             p.sendMessage(net.kyori.adventure.text.Component.text("Energy: " + d.energy + "/" + pl.maxEnergy(), net.kyori.adventure.text.format.NamedTextColor.AQUA));
             p.playSound(p.getLocation(), "entity.experience_orb.pickup", 1f, 1.2f);
             Fx.energy(p);
+        } else if (kind.equals("awakening")) {
+            if (!Ults.awaken(p)) return;   // not at max energy / already awakened: the stone is kept
         } else {
             Roll.start(p, pl.randomClass(d.type));
         }

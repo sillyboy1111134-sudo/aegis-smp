@@ -16,14 +16,11 @@ commands:
     usage: /myclass
   aegis:
     description: Admin command
-    usage: /aegis <give|setclass|setenergy|enchant|reload>
+    usage: /aegis <give|setclass|setenergy|enchant|megamace|reload>
     permission: aegis.admin
-  vow:
-    description: Make a binding vow (permanent sacrifice for a permanent gain)
-    usage: /vow <list|info|take|confirm|cancel|status>
   ult:
-    description: Give up an ability and two passives for an ultimate (needs max energy)
-    usage: /ult <list|info|take|confirm|cancel|status>
+    description: Show your class's ultimate (awaken it with an Awakening Stone at max energy)
+    usage: /ult <status|list>
   enchant:
     description: Apply Aegis custom enchants (anything else goes to vanilla /enchant)
     usage: /enchant [player] <id> [level]

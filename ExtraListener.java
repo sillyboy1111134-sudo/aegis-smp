@@ -188,10 +188,10 @@ final class ExtraListener implements Listener {
         UUID other = MoreClasses.links.get(e.getEntity().getUniqueId());
         if (other == null) return;
         Entity o = Bukkit.getEntity(other);
-        double dmg = e.getFinalDamage();
-        if (!(o instanceof LivingEntity lo) || lo.isDead() || dmg <= 0) return;
+        double dmg = e.getDamage();   // the raw hit (before armor): the other end takes it as a NORMAL hit, so its own armor and effects apply
+        if (!(o instanceof LivingEntity lo) || lo.isDead() || e.getFinalDamage() <= 0) return;
         MoreClasses.mirroring = true;
-        try { Abilities.hurtRaw(lo, dmg); } finally { MoreClasses.mirroring = false; }
+        try { lo.damage(dmg); } finally { MoreClasses.mirroring = false; }
     }
 
     // ---------------------------------------------------------------- Singularity

@@ -71,23 +71,46 @@ final class UltImpl {
         Ults.register("bloodbath", "Bloodbath", "A 30 block sea of blood: Poison II + Weakness II for 30s, you steal 2 hearts and every good potion effect from players inside.", 120, 30, false, false, UltImpl::bloodbath, null);
         Ults.register("indomitable", "Indomitable", "Invisible for 10s, +50 durability on every armor piece, no knockback for 30s.", 120, 30, false, false, UltImpl::indomitable, null);
         Ults.register("tides", "Tides of the Abyss", "A massive wave pushes everyone ahead of you for 4 hearts, then pulls them back with Mining Fatigue II + Slowness II for 30s.", 120, 6, false, false, UltImpl::tides, null);
-        Ults.register("hell", "A Piece of Hell", "Obsidian dome with nether terrain for 10s: everyone inside burns (unextinguishable), can't use water, you deal 1.5x damage.", 180, 10, true, false, UltImpl::hell, null);
-        Ults.register("workshop", "Workshop", "Obsidian dome workshop for 10s: Resistance III, and everything you craft has 1.5x durability, 2x mining speed and 1.15x damage.", 120, 10, false, false, UltImpl::workshop, null);
-        Ults.register("skyruler", "Sky Ruler", "Glide and shoot into the sky. Press again to boost in your look direction; hits give boosts (max 3). Landing deals 3 hearts.", 180, 40, false, false, UltImpl::skyRuler, UltImpl::skyBoost);
-        Ults.register("guardian", "True Guardian of the Deep", "Summons a full-strength Warden that fights like a wolf for 30s or until it dies.", 180, 30, true, false, UltImpl::guardian, null);
+        Ults.register("hell", "A Piece of Hell", "Obsidian dome with nether terrain for 10s: everyone inside burns (unextinguishable), can't use water, you deal 1.5x damage.", 180, 1200, true, false, UltImpl::hell, null);
+        Ults.register("workshop", "Workshop", "Obsidian dome workshop for 10s: Resistance III, and everything you craft has 1.5x durability, 2x mining speed and 1.15x damage.", 120, 1200, false, false, UltImpl::workshop, null);
+        Ults.register("skyruler", "Sky Ruler", "You are launched into the air and an elytra opens: you fly at constant rocket speed. Landing makes a 3 heart shockwave; if it hits someone you launch again (3 shockwaves max), if not it ends. Ends after 5 seconds without hitting anyone.", 180, 120, false, false, UltImpl::skyRuler, null);
+        Ults.register("domain", "Warden's Domain", "An Ancient City rises around you inside an obsidian dome: enemies are blinded and warden beams rain down on them for 60s.", 120, 1200, true, false, Domain::start, null);
         Ults.register("goldengod", "Golden God", "30s: apples in hand become golden apples, blocks in hand become gold blocks, Strength II and 20 hearts.", 3600, 30, false, false, UltImpl::goldenGod, null);
-        Ults.register("shadows", "Shadow Manipulation", "10 clones (your armor and effects, 100 HP) rise from a 30 block shadow pool: 5 hunt, 5 run. Everyone in the pool is blinded.", 120, 30, false, false, UltImpl::shadows, null);
-        Ults.register("idolgamble", "Idol Death Gamble", "Obsidian casino dome for 30s. Everyone inside spins the slots every 5s: 3 diamonds (1%) = Resistance III, Regen II, Strength IV.", 120, 30, false, false, UltImpl::idolGamble, null);
-        Ults.register("avoidance", "Avoidance of Fate", "3 lives. 1st pop: severs trust of enemies around you. 2nd: scatters them. 3rd: a wave for 3 hearts. Lasts until all 3 are used.", 1800, 3600, false, false, UltImpl::avoidance, null);
+        Ults.register("shadows", "Shadow Manipulation", "10 clones of you (your armor, weapon, shield and effects, 100 HP) rise from a 30 block shadow pool and fight like real PvPers: 5 hunt players, 5 run and only fight back. They eat golden apples when low and only ever attack players. Everyone in the pool is blinded.", 120, 1200, false, false, UltImpl::shadows, null);
+        Ults.register("idolgamble", "Idol Death Gamble", "Obsidian casino dome for 30s. Everyone inside spins the slots every 5s: 3 diamonds (1%) = Resistance III, Regen II, Strength IV.", 120, 1200, false, false, UltImpl::idolGamble, null);
+        Ults.register("avoidance", "Avoidance of Fate", "Passive: you hold 3 lives. 1st death avoided: severs trust of enemies around you. 2nd: scatters them. 3rd: a wave for 3 hearts. Recharges after all 3 are used.", 1800, 0, false, true, p -> false, null);
         Ults.register("supremesingularity", "Supreme Singularity", "A 30 block black hole drags everything in for 5s (half a heart per tick), then explodes for 4 hearts and launches everyone 30 blocks up.", 120, 6, false, false, UltImpl::supremeSingularity, null);
         Ults.register("areswrath", "Ares' Wrath", "Three spears orbit you; left-click with a sword to hurl them (2 hearts each). Any hit: Strength II + Speed II for 15s. 2 hits on one enemy: bleed 12s. 3 hits: 3s stun.", 60, 40, false, false, UltImpl::aresWrath, null);
         Ults.register("flowtime", "The Flow of Time", "Repair 30 durability on your armor, deal 30 to players within 30 blocks, and refill golden apples, cobwebs and XP bottles to one stack.", 120, 0, false, false, UltImpl::flowTime, null);
-        Ults.register("desolation", "Waves of Desolation", "Turns 30 blocks around you into a wasteland: Wither III, Poison III, bleed and Weakness II for 30s while you absorb their life and double your health.", 60, 30, false, false, UltImpl::desolation, null);
-        Ults.register("tremor", "Seismic Tremor", "Launches players within 30 blocks into the air and slams them down 3x faster, ignoring Feather Falling and no-fall passives.", 120, 8, false, false, UltImpl::tremorUlt, null);
-        Ults.register("worldtree", "Domain of the World Tree", "Unbreakable wooden dome with a 500 HP tree. Leave by pressing again or killing the tree. Trusted players get 20 hearts + Regen II.", 120, 120, false, false, UltImpl::worldTree, UltImpl::releaseTree);
-        Ults.register("chains", "Chains of Fate", "Chains everything within 30 blocks (5s stun) and gives bleed and the enchain effect for 30s.", 120, 30, false, false, UltImpl::chains, null);
-        Ults.register("defiantrage", "Defiant Rage", "Triggers by itself when you die: you revive, all armor is fully mended, Strength II + Speed III for 30s.", 1800, 0, false, true, p -> false, null);
+        Ults.register("desolation", "Waves of Desolation", "Turns 30 blocks around you into a wasteland: Wither III, Poison III, bleed and Weakness II for 30s while you absorb their life and double your health.", 60, 1200, false, false, UltImpl::desolation, null);
+        Ults.register("tremor", "Seismic Tremor", "Dolus' second ability (at max energy). Launches players within 30 blocks into the air and slams them down 3x faster, ignoring Feather Falling and no-fall passives.", 120, 8, false, false, UltImpl::tremorUlt, null);
+        Ults.register("worldtree", "Domain of the World Tree", "Replaces World Tree's first ability. Unbreakable wooden dome with a 500 HP tree. Leave by pressing again or killing the tree. Trusted players get 20 hearts + Regen II.", 120, 1200, true, false, UltImpl::worldTree, UltImpl::releaseTree);
+        Ults.register("chains", "Chains of Fate", "Replaces Enchain. Chains everything within 30 blocks (5s stun) and gives bleed and the enchain effect for 30s.", 120, 30, true, false, UltImpl::chains, null);
+        Ults.register("defiantrage", "Defiant Rage", "Passive: triggers by itself when you would die: you revive, all armor is fully mended, Strength II + Speed III for 30s.", 1800, 0, false, true, p -> false, null);
         Ults.register("swordgod", "Sword God", "A rain of swords from the sky: 1 heart on a hit, and each blade explodes on the ground for 1 heart in its blast radius.", 60, 8, false, false, UltImpl::swordGod, null);
+    }
+
+    static {
+        Ults.OF.put(ClassType.SHACKLED, "chains");
+        Ults.OF.put(ClassType.MOANDER, "desolation");
+        Ults.OF.put(ClassType.CHRONO, "flowtime");
+        Ults.OF.put(ClassType.ICOR, "bloodbath");
+        Ults.OF.put(ClassType.BERSERKER, "defiantrage");
+        Ults.OF.put(ClassType.DOLUS, "tremor");
+        Ults.OF.put(ClassType.SAMURAI, "swordgod");
+        Ults.OF.put(ClassType.YMIR, "indomitable");
+        Ults.OF.put(ClassType.VARUNA, "tides");
+        Ults.OF.put(ClassType.AGNI, "hell");
+        Ults.OF.put(ClassType.HEPHAESTUS, "workshop");
+        Ults.OF.put(ClassType.BOREUS, "skyruler");
+        Ults.OF.put(ClassType.AZAROTH, "domain");
+        Ults.OF.put(ClassType.MIDAS, "goldengod");
+        Ults.OF.put(ClassType.ROGUE, "shadows");
+        Ults.OF.put(ClassType.YGGDRASIL, "worldtree");
+        Ults.OF.put(ClassType.JACKPOT, "idolgamble");
+        Ults.OF.put(ClassType.FATEWEAVER, "avoidance");
+        Ults.OF.put(ClassType.SINGULARITY, "supremesingularity");
+        Ults.OF.put(ClassType.SPARTAN, "areswrath");
     }
 
     static double c(String id, String key, double def) { return Aegis.I.getConfig().getDouble("ults." + id + "." + key, def); }
@@ -105,8 +128,8 @@ final class UltImpl {
     /** The ultimate is over: its cooldown starts now. */
     static void finish(Player p, String id) {
         activeEnd.remove(p.getUniqueId() + id);
-        PlayerData d = Aegis.I.pd(p);
-        if (d.ultSlot > 0) d.endActive(d.ultSlot);
+        int slot = Ults.slotOf(p);
+        if (slot > 0) Aegis.I.pd(p).endActive(slot);
     }
 
     static final class Dom {
@@ -143,6 +166,11 @@ final class UltImpl {
     }
 
     static final Map<UUID, Dom> domains = new HashMap<>();
+
+    /** Domain ultimates last this many times longer than their base "seconds" (ults.domain-duration-multiplier). */
+    static double domSecs(String id, double def) {
+        return c(id, "seconds", def) * Aegis.I.getConfig().getDouble("ults.domain-duration-multiplier", 3.0);
+    }
 
     static Dom startDomain(Player p, String id, double r, double seconds, Map<Long, BlockData> plan) {
         Dom old = domains.remove(p.getUniqueId());
@@ -300,7 +328,7 @@ final class UltImpl {
         Map<Long, BlockData> plan = new LinkedHashMap<>();
         TempBuild.dome(plan, p.getLocation(), r, 2, Material.OBSIDIAN);
         netherFloor(plan, p.getLocation(), r);
-        final Dom d = startDomain(p, id, r, c(id, "seconds", 10), plan);
+        final Dom d = startDomain(p, id, r, domSecs(id, 10), plan);
         d.task = new BukkitRunnable() {
             @Override public void run() {
                 Player o = Bukkit.getPlayer(d.owner);
@@ -336,30 +364,67 @@ final class UltImpl {
     }
 
     // ================================================================ Hephaestus: Workshop
+    /** The look of the Workshop: a mix of blackstone, polished and cracked polished blackstone bricks, with gilded blackstone along the diagonals (the "corners"). */
+    private static BlockData blackstoneMix(int dx, int dz, boolean outer) {
+        if (outer) return Material.BLACKSTONE.createBlockData();
+        boolean corner = Math.abs(Math.abs(dx) - Math.abs(dz)) <= 2;
+        double roll = RND.nextDouble();
+        if (roll < (corner ? 0.32 : 0.03)) return Material.GILDED_BLACKSTONE.createBlockData();
+        roll = RND.nextDouble();
+        Material m = roll < .40 ? Material.BLACKSTONE : roll < .68 ? Material.POLISHED_BLACKSTONE_BRICKS : roll < .90 ? Material.CRACKED_POLISHED_BLACKSTONE_BRICKS : Material.POLISHED_BLACKSTONE;
+        return m.createBlockData();
+    }
+
+    private static void workshopShell(Map<Long, BlockData> plan, Location c, double r) {
+        World w = c.getWorld();
+        int px = c.getBlockX(), py = c.getBlockY(), pz = c.getBlockZ(), thick = 2, ext = (int) Math.ceil(r + thick);
+        for (int dy = -4; dy <= ext; dy++)
+            for (int dx = -ext; dx <= ext; dx++)
+                for (int dz = -ext; dz <= ext; dz++) {
+                    double d2 = dx * dx + dy * dy + dz * dz;
+                    if (d2 < r * r || d2 >= (r + thick) * (r + thick)) continue;
+                    int x = px + dx, y = py + dy, z = pz + dz;
+                    if (y < w.getMinHeight() || y >= w.getMaxHeight() || w.getBlockAt(x, y, z).getType().isSolid()) continue;
+                    plan.put(TempBuild.key(x, y, z), blackstoneMix(dx, dz, d2 >= (r + 1) * (r + 1)));   // inner layer mixed, outer layer plain
+                }
+    }
+
     private static boolean workshop(Player p) {
         final String id = "workshop";
         final double r = c(id, "radius", 15);
         Location ctr = p.getLocation();
         Map<Long, BlockData> plan = new LinkedHashMap<>();
-        TempBuild.dome(plan, ctr, r, 2, Material.OBSIDIAN);
+        workshopShell(plan, ctr, r);
         int cx = ctr.getBlockX(), cy = ctr.getBlockY(), cz = ctr.getBlockZ();
-        for (int dx = -7; dx <= 7; dx++)
-            for (int dz = -7; dz <= 7; dz++)
-                if (dx * dx + dz * dz <= 49) plan.put(TempBuild.key(cx + dx, cy - 1, cz + dz), Material.POLISHED_BLACKSTONE_BRICKS.createBlockData());
-        Material[] stations = {Material.CRAFTING_TABLE, Material.SMITHING_TABLE, Material.ANVIL, Material.GRINDSTONE, Material.BLAST_FURNACE,
-                Material.LOOM, Material.CARTOGRAPHY_TABLE, Material.FLETCHING_TABLE, Material.STONECUTTER, Material.CRAFTING_TABLE};
-        for (int i = 0; i < stations.length; i++) {
-            double a = Math.PI * 2 * i / stations.length;
-            plan.put(TempBuild.key(cx + (int) Math.round(Math.cos(a) * 5), cy, cz + (int) Math.round(Math.sin(a) * 5)), stations[i].createBlockData());
+        // floor: the same mixed blackstone as the walls, gilded blackstone gathering along the four diagonals
+        int rr = (int) r;
+        for (int dx = -rr; dx <= rr; dx++)
+            for (int dz = -rr; dz <= rr; dz++)
+                if (dx * dx + dz * dz < r * r) plan.put(TempBuild.key(cx + dx, cy - 1, cz + dz), blackstoneMix(dx, dz, false));
+        // stations: an inner ring and an outer ring on the diagonals
+        Material[] inner = {Material.CRAFTING_TABLE, Material.GRINDSTONE, Material.SMITHING_TABLE, Material.ANVIL};
+        for (int i = 0; i < inner.length; i++) {
+            double a2 = Math.PI * 2 * i / inner.length + Math.PI / 4;
+            plan.put(TempBuild.key(cx + (int) Math.round(Math.cos(a2) * 3), cy, cz + (int) Math.round(Math.sin(a2) * 3)), inner[i].createBlockData());
         }
-        plan.put(TempBuild.key(cx + 2, cy, cz), Material.LAVA_CAULDRON.createBlockData());
-        plan.put(TempBuild.key(cx - 2, cy, cz), Material.LAVA_CAULDRON.createBlockData());
-        final Dom d = startDomain(p, id, r, c(id, "seconds", 10), plan);
+        Material[] outer = {Material.BLAST_FURNACE, Material.FURNACE, Material.SMOKER, Material.STONECUTTER, Material.LOOM, Material.CARTOGRAPHY_TABLE, Material.FLETCHING_TABLE, Material.FURNACE};
+        for (int i = 0; i < outer.length; i++) {
+            double a2 = Math.PI * 2 * i / outer.length + Math.PI / 8;
+            plan.put(TempBuild.key(cx + (int) Math.round(Math.cos(a2) * 7), cy, cz + (int) Math.round(Math.sin(a2) * 7)), outer[i].createBlockData());
+        }
+        // four lava pools set into the floor at the compass points (their sides are floor blocks, so the lava can't flow)
+        int lp = (int) Math.min(10, r - 4);
+        int[][] pools = {{lp, 0}, {-lp, 0}, {0, lp}, {0, -lp}};
+        for (int[] q : pools) {
+            plan.put(TempBuild.key(cx + q[0], cy - 1, cz + q[1]), Material.LAVA.createBlockData());
+            plan.put(TempBuild.key(cx + q[0], cy - 2, cz + q[1]), Material.BLACKSTONE.createBlockData());
+        }
+        final Dom d = startDomain(p, id, r, domSecs(id, 10), plan);
         d.task = new BukkitRunnable() {
             @Override public void run() {
                 Player o = Bukkit.getPlayer(d.owner);
                 if (o == null) { cancel(); return; }
-                if (d.contains(o.getLocation())) o.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 2, false, true, true));
+                if (d.contains(o.getLocation())) { o.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 2, false, true, true)); o.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 40, 0, false, false, false)); }
                 Fx.part(d.c.clone().add(0, 2, 0), Particle.LAVA, 4, 3, 1, 3, 0);
             }
         };
@@ -410,7 +475,8 @@ final class UltImpl {
     }
 
     // ================================================================ Boreus: Sky Ruler
-    private static final class Sky { ItemStack chest; int boosts = 1; }
+    /** chest = the real chestplate to give back; waves = shockwaves so far; idle = ticks since the last hit; air = ticks since the last launch. */
+    private static final class Sky { ItemStack chest; int waves = 0, idle = 0, air = 0; }
 
     private static final Map<UUID, Sky> sky = new HashMap<>();
 
@@ -430,6 +496,14 @@ final class UltImpl {
         return it;
     }
 
+    static boolean inSky(Player p) { return sky.containsKey(p.getUniqueId()); }
+
+    /**
+     * Sky Ruler: you are launched into the air and an elytra opens by itself. You then fly at a constant speed, like a
+     * flight-duration-1 firework rocket, steered by where you look. Hitting the ground makes a shockwave (3 hearts). If it
+     * hits somebody you are launched up again (3 shockwaves at most); if it hits nobody, the ultimate ends. It also ends
+     * after 5 seconds without hitting anybody (melee or shockwave), so nobody can just run around with it.
+     */
     private static boolean skyRuler(Player p) {
         final UUID id = p.getUniqueId();
         if (sky.containsKey(id)) return false;
@@ -438,52 +512,74 @@ final class UltImpl {
         s.chest = cur == null ? null : cur.clone();
         sky.put(id, s);
         p.getInventory().setChestplate(skyElytra());
-        p.setVelocity(new Vector(0, c("skyruler", "launch", 2.2), 0));
-        p.getWorld().playSound(p.getLocation(), "entity.firework_rocket.launch", 1.2f, 0.8f);
+        skyLaunch(p, s);
         new BukkitRunnable() {
-            int t = 0;
             @Override public void run() {
                 Player q = Bukkit.getPlayer(id);
-                if (q == null || !sky.containsKey(id) || q.isDead()) { cancel(); return; }
-                t++;
-                if (t == 4) q.setGliding(true);
+                Sky st = sky.get(id);
+                if (q == null || st == null || q.isDead()) { cancel(); return; }
+                st.air++;
+                st.idle++;
+                q.setFallDistance(0);   // the ride itself never hurts
+                if (st.idle > (int) (c("skyruler", "idle-seconds", 5) * 20)) {   // 5 seconds without hitting anybody
+                    q.sendActionBar(Component.text("Sky Ruler ended: you must hit someone every 5 seconds.", NamedTextColor.GRAY));
+                    endSky(q);
+                    cancel();
+                    return;
+                }
+                if (st.air >= 6 && !q.isGliding() && !q.isOnGround()) q.setGliding(true);   // the wings open on their own after the launch
+                if (st.air >= (int) c("skyruler", "launch-ticks", 10) && q.isGliding()) {   // then a constant rocket-speed flight, steered by your look direction
+                    q.setVelocity(q.getLocation().getDirection().multiply(c("skyruler", "cruise-speed", 1.6)));
+                }
                 Fx.part(q.getLocation(), Particle.FIREWORK, 3, .2, .2, .2, .02);
-                if (t > 12 && (q.isOnGround() || t > 800)) { landSky(q); cancel(); }
+                if (st.air > 12 && q.isOnGround()) {
+                    if (!skyWave(q, st)) cancel();
+                }
+                else if (st.air > 1200) { endSky(q); cancel(); }
             }
         }.runTaskTimer(Aegis.I, 1, 1);
         return true;
     }
 
-    /** Pressing the ultimate key again: shoot yourself where you look, like a firework rocket. */
-    private static boolean skyBoost(Player p) {
-        Sky s = sky.get(p.getUniqueId());
-        if (s == null) return false;
-        if (s.boosts <= 0) { Abilities.msg(p, "No boosts left. Hit someone to gain one."); return false; }
-        s.boosts--;
-        p.setGliding(true);
-        p.setVelocity(p.getLocation().getDirection().multiply(c("skyruler", "boost-speed", 1.9)));
-        p.getWorld().playSound(p.getLocation(), "entity.firework_rocket.launch", 1f, 1.1f);
-        p.sendActionBar(Component.text("Boosts left: " + s.boosts, NamedTextColor.AQUA));
-        return true;
+    private static void skyLaunch(Player p, Sky s) {
+        s.air = 0;
+        p.setGliding(false);
+        p.setVelocity(new Vector(0, c("skyruler", "launch", 2.2), 0));
+        p.getWorld().playSound(p.getLocation(), "entity.firework_rocket.launch", 1.2f, 0.8f);
+        Fx.part(p.getLocation(), Particle.CLOUD, 25, .4, .1, .4, .1);
     }
 
+    /** Landed. Returns true if the flight goes on (the shockwave hit somebody and a wave is left). */
+    private static boolean skyWave(Player q, Sky s) {
+        double r = c("skyruler", "landing-radius", 5), dmg = c("skyruler", "landing-damage", 6.0);   // 6 HP = 3 hearts
+        int hit = 0;
+        for (Entity e : q.getWorld().getNearbyEntities(q.getLocation(), r, r, r))
+            if (Abilities.validTarget(q, e) && !Pets.isPet(e)) { Abilities.hurt((LivingEntity) e, dmg, q); hit++; }
+        Fx.explosion(q.getLocation(), 2f);
+        Fx.expand(q.getLocation(), 1, r, 10, 32, l -> Fx.part(l, Particle.CLOUD, 1, 0, 0, 0, 0));
+        s.waves++;
+        int max = (int) c("skyruler", "max-waves", 3);
+        if (hit > 0 && s.waves < max) {   // somebody was hit: up again, and the 5 second timer starts over
+            s.idle = 0;
+            q.sendActionBar(Component.text("Shockwave " + s.waves + "/" + max + " hit " + hit + "!", NamedTextColor.AQUA));
+            skyLaunch(q, s);
+            return true;
+        }
+        endSky(q);
+        return false;
+    }
+
+    /** A melee hit while flying also resets the 5 second timer. */
     static void skyHit(Player p) {
         Sky s = sky.get(p.getUniqueId());
-        if (s == null) return;
-        int max = (int) c("skyruler", "max-boosts", 3);
-        if (s.boosts < max) s.boosts++;
-        p.sendActionBar(Component.text("+1 boost (" + s.boosts + ")", NamedTextColor.AQUA));
+        if (s != null) s.idle = 0;
     }
 
-    private static void landSky(Player q) {
+    private static void endSky(Player q) {
         Sky s = sky.remove(q.getUniqueId());
         if (s == null) return;
         q.setGliding(false);
         q.getInventory().setChestplate(s.chest);
-        double r = c("skyruler", "landing-radius", 4);
-        for (Entity e : q.getWorld().getNearbyEntities(q.getLocation(), r, r, r))
-            if (Abilities.validTarget(q, e)) Abilities.hurt((LivingEntity) e, c("skyruler", "landing-damage", 6.0), q);   // 3 hearts
-        Fx.explosion(q.getLocation(), 2f);
         finish(q, "skyruler");
     }
 
@@ -494,11 +590,6 @@ final class UltImpl {
             if (e.getKeepInventory()) e.getEntity().getInventory().setChestplate(s.chest);
             else e.getDrops().add(s.chest);
         }
-    }
-
-    // ================================================================ Azaroth: True Guardian of the Deep
-    private static boolean guardian(Player p) {
-        return Pets.summonUlt(p, (int) (c("guardian", "seconds", 30) * 20));
     }
 
     // ================================================================ Midas: Golden God
@@ -537,22 +628,14 @@ final class UltImpl {
     }
 
     // ================================================================ Rogue: Shadow Manipulation
-    static final Map<UUID, UUID> cloneOwner = new HashMap<>();    // clone -> owner
-    private static final Set<UUID> runners = new HashSet<>();
-    static final Map<UUID, UUID> provoked = new HashMap<>();      // clone -> the one who hit it
-
-    static boolean isClone(Entity e) { return cloneOwner.containsKey(e.getUniqueId()); }
-
-    static boolean isRunner(Entity e) { return runners.contains(e.getUniqueId()); }
-
     private static boolean shadows(Player p) {
         final String id = "shadows";
         final double r = c(id, "radius", 30);
-        final int life = (int) (c(id, "seconds", 30) * 20);
+        final int life = (int) (domSecs(id, 30) * 20);
         final Location ctr = p.getLocation().clone();
         final World w = ctr.getWorld();
         final UUID owner = p.getUniqueId();
-        final Dom d = startDomain(p, id, r, c(id, "seconds", 30), new LinkedHashMap<>());
+        final Dom d = startDomain(p, id, r, domSecs(id, 30), new LinkedHashMap<>());
         d.task = new BukkitRunnable() {
             @Override public void run() {
                 Player o = Bukkit.getPlayer(owner);
@@ -568,110 +651,9 @@ final class UltImpl {
             }
         };
         d.task.runTaskTimer(Aegis.I, 0, 20);
-        final List<Zombie> clones = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            Location at = randomSurface(ctr, r);
-            Zombie z = spawnClone(p, at, life);
-            clones.add(z);
-            if (i >= 5) runners.add(z.getUniqueId());   // 5 hunt, 5 run
-            Fx.burst(at.clone().add(0, 1, 0), Particle.SQUID_INK, 25, .2);
-        }
-        w.playSound(ctr, "entity.enderman.teleport", 1.2f, 0.5f);
-        new BukkitRunnable() {
-            int t = 0;
-            @Override public void run() {
-                t += 10;
-                Player o = Bukkit.getPlayer(owner);
-                if (o == null || t > life) { for (Zombie z : clones) removeClone(z); cancel(); return; }
-                for (Zombie z : clones) {
-                    if (!z.isValid()) continue;
-                    UUID prov = provoked.get(z.getUniqueId());
-                    Entity pe = prov == null ? null : Bukkit.getEntity(prov);
-                    if (pe instanceof LivingEntity ple && ple.isValid()) { z.setTarget(ple); continue; }   // whoever hits a clone gets attacked
-                    if (runners.contains(z.getUniqueId())) {
-                        z.setTarget(null);
-                        if (t % 40 == 0) {
-                            double a = RND.nextDouble() * Math.PI * 2;
-                            z.getPathfinder().moveTo(z.getLocation().add(Math.cos(a) * 25, 0, Math.sin(a) * 25), 1.25);
-                        }
-                    } else {
-                        LivingEntity cur = z.getTarget();
-                        if (cur == null || !cur.isValid()) z.setTarget(nearestEnemy(o, z.getLocation(), 60));
-                    }
-                }
-            }
-        }.runTaskTimer(Aegis.I, 0, 10);
+        ShadowClones.summon(p, ctr, r, life);
+        d.onEnd.add(() -> ShadowClones.removeOf(owner));   // the clones vanish when the pool does
         return true;
-    }
-
-    private static Player nearestEnemy(Player owner, Location from, double range) {
-        Player best = null;
-        double bd = range * range;
-        for (Player q : from.getWorld().getPlayers()) {
-            if (!Abilities.validTarget(owner, q)) continue;
-            double d = q.getLocation().distanceSquared(from);
-            if (d < bd) { bd = d; best = q; }
-        }
-        return best;
-    }
-
-    private static Zombie spawnClone(Player p, Location at, int life) {
-        Zombie z = at.getWorld().spawn(at, Zombie.class, zz -> {
-            zz.setShouldBurnInDay(false);
-            zz.setBaby(false);
-            zz.setCanPickupItems(false);
-            zz.setPersistent(false);
-            zz.setRemoveWhenFarAway(false);
-            AttributeInstance hp = zz.getAttribute(Attribute.MAX_HEALTH);
-            if (hp != null) hp.setBaseValue(c("shadows", "clone-health", 100));
-            zz.setHealth(c("shadows", "clone-health", 100));
-            AttributeInstance dmg = zz.getAttribute(Attribute.ATTACK_DAMAGE);
-            if (dmg != null) dmg.setBaseValue(c("shadows", "clone-damage", 6));
-            AttributeInstance fr = zz.getAttribute(Attribute.FOLLOW_RANGE);
-            if (fr != null) fr.setBaseValue(64);
-            EntityEquipment eq = zz.getEquipment();
-            PlayerInventory inv = p.getInventory();
-            ItemStack head = inv.getHelmet() == null ? null : inv.getHelmet().clone();
-            if (head == null) {
-                head = new ItemStack(Material.PLAYER_HEAD);
-                SkullMeta sm = (SkullMeta) head.getItemMeta();
-                sm.setOwningPlayer(p);
-                head.setItemMeta(sm);
-            }
-            eq.setHelmet(head);
-            eq.setChestplate(inv.getChestplate() == null ? null : inv.getChestplate().clone());   // exact armor, trims included
-            eq.setLeggings(inv.getLeggings() == null ? null : inv.getLeggings().clone());
-            eq.setBoots(inv.getBoots() == null ? null : inv.getBoots().clone());
-            eq.setItemInMainHand(inv.getItemInMainHand().clone());
-            eq.setHelmetDropChance(0f);
-            eq.setChestplateDropChance(0f);
-            eq.setLeggingsDropChance(0f);
-            eq.setBootsDropChance(0f);
-            eq.setItemInMainHandDropChance(0f);
-            zz.customName(Component.text(p.getName(), NamedTextColor.WHITE));
-            zz.setCustomNameVisible(true);
-            for (PotionEffect ef : p.getActivePotionEffects())   // exact potion effects
-                if (ef.getType() != PotionEffectType.INVISIBILITY)
-                    zz.addPotionEffect(new PotionEffect(ef.getType(), life, ef.getAmplifier(), ef.isAmbient(), ef.hasParticles(), ef.hasIcon()));
-        });
-        cloneOwner.put(z.getUniqueId(), p.getUniqueId());
-        return z;
-    }
-
-    private static void removeClone(Zombie z) {
-        cloneOwner.remove(z.getUniqueId());
-        runners.remove(z.getUniqueId());
-        provoked.remove(z.getUniqueId());
-        if (z.isValid()) {
-            Fx.burst(z.getLocation().add(0, 1, 0), Particle.SQUID_INK, 20, .2);
-            z.remove();
-        }
-    }
-
-    static void cloneDied(Entity z) {
-        cloneOwner.remove(z.getUniqueId());
-        runners.remove(z.getUniqueId());
-        provoked.remove(z.getUniqueId());
     }
 
     // ================================================================ Jackpot: Idol Death Gamble
@@ -684,7 +666,7 @@ final class UltImpl {
         Map<Long, BlockData> plan = new LinkedHashMap<>();
         TempBuild.dome(plan, p.getLocation(), r, 2, Material.OBSIDIAN);
         casino(plan, p.getLocation(), id);
-        final Dom d = startDomain(p, id, r, c(id, "seconds", 30), plan);
+        final Dom d = startDomain(p, id, r, domSecs(id, 30), plan);
         d.onEnd.add(() -> { for (Player q : d.c.getWorld().getPlayers()) spins.remove(q.getUniqueId()); });
         final int buff = (int) (c(id, "buff-seconds", 30) * 20);
         d.task = new BukkitRunnable() {
@@ -746,20 +728,14 @@ final class UltImpl {
     }
 
     // ================================================================ Fateweaver: Avoidance of Fate
-    private static final Map<UUID, Integer> fate = new HashMap<>();
-
-    private static boolean avoidance(Player p) {
-        fate.put(p.getUniqueId(), 3);
-        say(p, "Three lives of fate are yours.", NamedTextColor.LIGHT_PURPLE);
-        p.getWorld().spawnParticle(Particle.WITCH, p.getLocation().add(0, 1, 0), 60, .5, 1, .5, .1);
-        return true;
-    }
+    private static final Map<UUID, Integer> fate = new HashMap<>();   // lives left in the current set of three (absent = a fresh set is ready)
 
     /** Called when a killing blow lands: Fateweaver lives and Berserker's Defiant Rage. */
     static boolean tryRevive(Player p) {
         PlayerData d = Aegis.I.pd(p);
-        if (d.ult == null || Ults.slot(p) == 0) return false;
-        switch (d.ult) {
+        Ults.Def def = Ults.def(p);
+        if (def == null || !def.passive() || d.energy < Aegis.I.maxEnergy()) return false;   // passive ultimates only work at max energy
+        switch (def.id()) {
             case "defiantrage": return defiantRage(p, d);
             case "avoidance": return fatePop(p);
             default: return false;
@@ -767,7 +743,7 @@ final class UltImpl {
     }
 
     private static boolean defiantRage(Player p, PlayerData d) {
-        if (d.remaining(d.ultSlot) > 0) return false;
+        if (d.remKey("ult") > 0) return false;
         AttributeInstance a = p.getAttribute(Attribute.MAX_HEALTH);
         p.setHealth(a == null ? 20 : a.getValue());
         p.setNoDamageTicks(40);
@@ -776,7 +752,7 @@ final class UltImpl {
         p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, t, 1));
         p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, t, 2));
         Ults.Def def = Ults.REGISTRY.get("defiantrage");
-        d.startCd(d.ultSlot, def == null ? 1800 : Ults.cooldown(def));
+        d.startKey("ult", def == null ? 1800 : Ults.cooldown(def));
         p.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation().add(0, 1, 0), 80, .5, 1, .5, .5);
         p.getWorld().playSound(p.getLocation(), "item.totem.use", 1f, 0.8f);
         p.sendMessage(Component.text("DEFIANT RAGE! You refuse to fall.", NamedTextColor.DARK_RED, TextDecoration.BOLD));
@@ -784,13 +760,25 @@ final class UltImpl {
         return true;
     }
 
+    /** Passive: no button. A fresh set of 3 lives is always ready at max energy; after the third is used it recharges. */
     private static boolean fatePop(Player p) {
+        PlayerData d = Aegis.I.pd(p);
         Integer lives = fate.get(p.getUniqueId());
-        if (lives == null || lives <= 0) return false;
+        if (lives == null) {
+            if (d.remKey("ult") > 0) return false;   // still recharging
+            lives = 3;
+        }
+        if (lives <= 0) return false;
         int idx = 3 - lives;
         lives--;
-        if (lives <= 0) { fate.remove(p.getUniqueId()); finish(p, "avoidance"); }
-        else fate.put(p.getUniqueId(), lives);
+        if (lives <= 0) {
+            fate.remove(p.getUniqueId());
+            Ults.Def def = Ults.REGISTRY.get("avoidance");
+            d.startKey("ult", def == null ? 1800 : Ults.cooldown(def));
+        } else {
+            fate.put(p.getUniqueId(), lives);
+        }
+        say(p, "Fate turns aside the blow. Lives left: " + lives, NamedTextColor.LIGHT_PURPLE);
         AttributeInstance a = p.getAttribute(Attribute.MAX_HEALTH);
         p.setHealth(a == null ? 20 : a.getValue());
         p.setNoDamageTicks(40);
@@ -1041,10 +1029,10 @@ final class UltImpl {
     private static boolean desolation(Player p) {
         final String id = "desolation";
         final double r = c(id, "radius", 30);
-        final int ticks = (int) (c(id, "seconds", 30) * 20);
+        final int ticks = (int) (domSecs(id, 30) * 20);
         Map<Long, BlockData> plan = new LinkedHashMap<>();
         wasteland(plan, p.getLocation(), r);
-        final Dom d = startDomain(p, id, r, c(id, "seconds", 30), plan);
+        final Dom d = startDomain(p, id, r, domSecs(id, 30), plan);
         for (LivingEntity le : enemies(p, r)) {
             le.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, ticks, 2));
             le.addPotionEffect(new PotionEffect(PotionEffectType.POISON, ticks, 2));
@@ -1134,7 +1122,7 @@ final class UltImpl {
     private static boolean worldTree(Player p) {
         final String id = "worldtree";
         final double r = c(id, "radius", 20);
-        final double maxSecs = c(id, "max-seconds", 120);
+        final double maxSecs = c(id, "max-seconds", 120) * Aegis.I.getConfig().getDouble("ults.domain-duration-multiplier", 3.0);
         Location ctr = p.getLocation().clone();
         Map<Long, BlockData> plan = new LinkedHashMap<>();
         TempBuild.dome(plan, ctr, r, 2, Material.OAK_PLANKS);
@@ -1309,8 +1297,7 @@ final class UltImpl {
     static void shutdown() {
         for (Dom d : new ArrayList<>(domains.values())) { d.ended = true; if (d.task != null) d.task.cancel(); if (d.shimmer != null) d.shimmer.cancel(); for (Runnable x : d.onEnd) x.run(); }
         domains.clear();
-        for (UUID z : new ArrayList<>(cloneOwner.keySet())) { Entity e = Bukkit.getEntity(z); if (e != null) e.remove(); }
-        cloneOwner.clear();
+        ShadowClones.shutdown();
         TempBuild.shutdown();
     }
 }

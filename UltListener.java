@@ -79,41 +79,47 @@ final class UltListener implements Listener {
         e.setCurrentItem(UltImpl.enhance(res.clone()));
     }
 
-    // ---- Rogue's shadow clones
-    @EventHandler(ignoreCancelled = true)
+    // ---- Rogue's shadow clones (the AI is in ShadowClones)
+    /** The vanilla zombie AI never picks targets for a clone: the clone AI does all the fighting itself. */
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onClone(EntityTargetLivingEntityEvent e) {
-        Entity z = e.getEntity();
-        if (!UltImpl.isClone(z) || e.getTarget() == null) return;
-        UUID owner = UltImpl.cloneOwner.get(z.getUniqueId());
-        LivingEntity t = e.getTarget();
-        Player o = owner == null ? null : org.bukkit.Bukkit.getPlayer(owner);
-        if (t.getUniqueId().equals(owner) || (o != null && Abilities.trusts(o, t))) { e.setCancelled(true); return; }
-        if (UltImpl.isRunner(z) && !t.getUniqueId().equals(UltImpl.provoked.get(z.getUniqueId()))) e.setCancelled(true);   // runners only fight back
+        if (ShadowClones.isClone(e.getEntity())) e.setCancelled(true);
+    }
+
+    /** Only the clone AI's own swings count; a vanilla zombie bite from a clone is cancelled. */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onCloneSwing(EntityDamageByEntityEvent e) {
+        if (ShadowClones.isClone(e.getDamager()) && !ShadowClones.swinging) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onCloneBlock(EntityDamageByEntityEvent e) {
+        if (e.getEntity() instanceof Zombie z && ShadowClones.isClone(z) && ShadowClones.shieldBlocks(z, e.getDamager())) e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onHit(EntityDamageByEntityEvent e) {
         Entity damager = e.getDamager();
         if (damager instanceof Projectile pr && pr.getShooter() instanceof Entity se) damager = se;
-        // a clone that gets hit hunts whoever hit it
-        if (e.getEntity() instanceof Zombie z && UltImpl.isClone(z) && damager instanceof LivingEntity att) {
-            UUID owner = UltImpl.cloneOwner.get(z.getUniqueId());
-            Player o = owner == null ? null : org.bukkit.Bukkit.getPlayer(owner);
-            if (!att.getUniqueId().equals(owner) && (o == null || !Abilities.trusts(o, att))) {
-                UltImpl.provoked.put(z.getUniqueId(), att.getUniqueId());
-                z.setTarget(att);
-            }
-        }
+        // a clone that gets hit by a player hunts that player
+        if (e.getEntity() instanceof Zombie z && ShadowClones.isClone(z)) ShadowClones.provoke(z, damager);
         // Boreus: every hit in the air gives another boost
         if (damager instanceof Player p && e.getEntity() instanceof LivingEntity) UltImpl.skyHit(p);
     }
 
     @EventHandler
     public void onCloneDeath(EntityDeathEvent e) {
-        if (!UltImpl.isClone(e.getEntity())) return;
+        if (!ShadowClones.isClone(e.getEntity())) return;
         e.getDrops().clear();
         e.setDroppedExp(0);
-        UltImpl.cloneDied(e.getEntity());
+        ShadowClones.died(e.getEntity());
+    }
+
+    // ---- Boreus: Sky Ruler never hurts the rider (crashing into walls, landing)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onSkyCrash(org.bukkit.event.entity.EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Player p) || !UltImpl.inSky(p)) return;
+        switch (e.getCause()) { case FALL, FLY_INTO_WALL -> e.setCancelled(true); default -> { } }
     }
 
     // ---- Boreus: the borrowed elytra never drops and can't be taken off

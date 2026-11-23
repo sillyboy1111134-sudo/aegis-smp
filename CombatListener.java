@@ -32,6 +32,27 @@ public final class CombatListener implements Listener {
 
     private static final class Combo { UUID target; int n; long last; }
 
+    // ---- Boreus axe smash: how far the player has really fallen (highest point since leaving the ground)
+    private static final Map<UUID, Double> peak = new HashMap<>();
+    private boolean smashed = false;                 // set while onHit works out an axe smash
+    private EntityDamageByEntityEvent smashEvent;    // the event that carries a smash: it is true (armor-ignoring) damage
+
+    /** Forget the fall so far (Breezy Dash and the smash itself start a fresh fall). */
+    static void resetFall(Player p) { peak.put(p.getUniqueId(), p.getLocation().getY()); p.setFallDistance(0); }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onFallTrack(org.bukkit.event.player.PlayerMoveEvent e) {
+        Player p = e.getPlayer();
+        if (e.getTo() == null) return;
+        if (p.isOnGround() || p.isInWater() || p.isInLava() || p.isClimbing() || p.isInsideVehicle()) { peak.remove(p.getUniqueId()); return; }
+        peak.merge(p.getUniqueId(), e.getTo().getY(), Math::max);
+    }
+
+    @EventHandler
+    public void onQuitFall(org.bukkit.event.player.PlayerQuitEvent e) { peak.remove(e.getPlayer().getUniqueId()); }
+
+    private static boolean isSpear(ItemStack it) { return it != null && it.getType().name().endsWith("_SPEAR"); }
+
     // ------------------------------------------------------------------ generic damage rules
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDamage(EntityDamageEvent e) {
@@ -70,7 +91,8 @@ public final class CombatListener implements Listener {
                     * (1 - Math.min(1.0, pen * CustomEnchantListener.cfgD("penetration.percent-per-level", 0.10))));
         }
         boolean allTrue = pl.getConfig().getBoolean("general.all-damage-true", false);
-        boolean trueDmg = allTrue || (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true));
+        boolean smash = e == smashEvent;   // Boreus' axe smash: always lands in full, armor or not
+        boolean trueDmg = allTrue || smash || (Abilities.inAbility && pl.getConfig().getBoolean("general.abilities-ignore-armor", true));
         if (trueDmg && e.isApplicable(DamageModifier.ARMOR)) {
             double base = e.getDamage(DamageModifier.BASE)
                     + (e.isApplicable(DamageModifier.HARD_HAT) ? e.getDamage(DamageModifier.HARD_HAT) : 0)
@@ -93,6 +115,12 @@ public final class CombatListener implements Listener {
             double umult = UltImpl.damageMult(up2, v);
             if (umult != 1.0) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) * umult);
         }
+        // Spears: a melee hit never deals more than spear.damage-cap (default 10 HP = 5 hearts); abilities are not capped
+        if (e instanceof EntityDamageByEntityEvent se && se.getDamager() instanceof Player sp && e.getCause() == EntityDamageEvent.DamageCause.ENTITY_ATTACK
+                && !Abilities.inAbility && isSpear(sp.getInventory().getItemInMainHand())) {
+            double cap = pl.getConfig().getDouble("spear.damage-cap", 10.0), f = e.getFinalDamage();
+            if (f > cap) e.setDamage(DamageModifier.BASE, e.getDamage(DamageModifier.BASE) - (f - cap));
+        }
         if (v instanceof Player tp && e.getCause() == EntityDamageEvent.DamageCause.FALL && UltImpl.tremor(tp) && e.isApplicable(DamageModifier.MAGIC))
             e.setDamage(DamageModifier.MAGIC, 0);
         if (v instanceof Player p) {
@@ -108,9 +136,6 @@ public final class CombatListener implements Listener {
         // Ultimates that trigger on a killing blow: Fateweaver's lives, Berserker's Defiant Rage
         if (!e.isCancelled() && v instanceof Player ur && e.getCause() != EntityDamageEvent.DamageCause.VOID
                 && ur.getHealth() - e.getFinalDamage() <= 0 && UltImpl.tryRevive(ur)) e.setCancelled(true);
-        // Vow of the Phoenix: survive a killing blow
-        if (!e.isCancelled() && v instanceof Player ph && e.getCause() != EntityDamageEvent.DamageCause.VOID
-                && ph.getHealth() - e.getFinalDamage() <= 0 && Vows.tryPhoenix(ph)) e.setCancelled(true);
     }
 
     // ------------------------------------------------------------------ melee
@@ -136,6 +161,8 @@ public final class CombatListener implements Listener {
         if (att != null && Abilities.trusts(att, vic) && pl.getConfig().getBoolean("trust.disable-pvp", false)) { e.setCancelled(true); return; }
         if (Abilities.inAbility || att == null || e.getCause() != EntityDamageEvent.DamageCause.ENTITY_ATTACK) return;
 
+        smashed = false;
+        smashEvent = null;
         PlayerData d = pl.pd(att);
         boolean strong = att.getAttackCooldown() >= pl.getConfig().getDouble("general.strong-hit-threshold", 0.9);
         boolean trusted = Abilities.trusts(att, vic);
@@ -191,6 +218,7 @@ public final class CombatListener implements Listener {
             }
         }
         if (!trusted) dmg = CustomEnchantListener.melee(att, vic, strong, dmg);
+        if (smashed) { smashEvent = e; smashed = false; }
         e.setDamage(dmg);
         shieldLogic(att, vic);
     }
@@ -201,7 +229,9 @@ public final class CombatListener implements Listener {
         boolean overdrive = Status.on(Status.overdrive, att);
         PlayerData d = pl.pd(att);
         if (!overdrive && d.remKey("mace") > 0) return dmg;
-        double fall = att.getFallDistance();
+        // the real fall: the server's counter, or how far below the highest point of this jump we are (wind charges etc. can reset the counter)
+        double tracked = peak.getOrDefault(att.getUniqueId(), att.getLocation().getY()) - att.getLocation().getY();
+        double fall = Math.max(att.getFallDistance(), tracked);
         double minFall = overdrive ? pl.getConfig().getDouble("classes.boreus.a2.overdrive-min-fall", 1.5) : n.getDouble("mace-min-fall", 5);
         if (fall < minFall) return dmg;
 
@@ -219,10 +249,11 @@ public final class CombatListener implements Listener {
             if (!overdrive) total = Math.min(n.getDouble("mace-max-damage", 8.0), total);   // 4 hearts
         }
         if (!overdrive) d.startKey("mace", n.getDouble("mace-cooldown", 10));
+        smashed = true;
 
         Fx.smash(vic.getLocation(), overdrive);
         att.getWorld().playSound(vic.getLocation(), "item.mace.smash_ground", 1f, 1f);
-        att.setFallDistance(0);
+        resetFall(att);
         if (overdrive) {
             // Windburst: launch the attacker back up
             Vector up = att.getVelocity();

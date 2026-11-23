@@ -190,13 +190,8 @@ final class Fx {
                 }
             }
             case AZAROTH -> {
-                if (n == 2) {
-                    double R = Abilities.v(pl, 2, "radius", 15);
-                    for (int h = 0; h < 3; h++) {
-                        final double yy = h * 1.2;
-                        expand(feet.clone().add(0, yy, 0), 1, R, 22, 64, l -> { part(l, Particle.SCULK_SOUL, 1, 0, .1, 0, .02); dust(l, 1, 0, 0x00ACC1, 1.6f); });
-                    }
-                    burst(mid, Particle.SCULK_SOUL, 80, .5);
+                if (n == 2) {   // Sonic Beam: just a small flash at the caster (the beam itself is drawn by the ability)
+                    burst(mid, Particle.SCULK_SOUL, 20, .3);
                     part(mid, Particle.SONIC_BOOM, 1, 0, 0, 0, 0);
                 }
             }

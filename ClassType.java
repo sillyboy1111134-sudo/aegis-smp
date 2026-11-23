@@ -53,7 +53,7 @@ public enum ClassType {
     AZAROTH("azaroth", "Azaroth",
             new String[]{"wardens", "darkness", "resist", "strength", "sculk"},
             new String[]{"Warden's Kin", "Darkening Strikes", "Resistance", "Strength", "Sculk Blessing"},
-            "Deep's Call", "Warden's Domain"),
+            "Deep's Call", "Sonic Beam"),
     MIDAS("midas", "Midas",
             new String[]{"neth", "haste", "hero", "mining", "nethergold", "heads"},
             new String[]{"Netherite Tools", "Haste", "Hero of the Village", "Midas Mining", "Gilded Nether", "Head Hunter"},

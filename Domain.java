@@ -30,25 +30,28 @@ import java.util.concurrent.ThreadLocalRandom;
 final class Domain {
     private static final BlockFace[] FACES = {BlockFace.UP, BlockFace.DOWN, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
 
+    /** Settings live under ults.domain in config.yml (the domain is Azaroth's ultimate). */
+    private static double v(String key, double def) { return Aegis.I.getConfig().getDouble("ults.domain." + key, def); }
+
     static boolean start(Player p) {
         Aegis pl = Aegis.I;
-        int R = Math.max(12, (int) Abilities.v(p, 2, "radius", 30));
-        int dur = Abilities.ticks(p, Abilities.v(p, 2, "seconds", 60));
-        int perTick = Math.max(200, (int) Abilities.v(p, 2, "blocks-per-tick", 1500));
-        boolean restore = pl.getConfig().getBoolean(Abilities.path(p, 2, "restore"), true);
-        int interval = Math.max(5, (int) Abilities.v(p, 2, "beam-interval-ticks", 40));
-        int beams = (int) Abilities.v(p, 2, "beams-per-interval", 3);
-        double beamDmg = Abilities.v(p, 2, "beam-damage", 6.0);
-        double beamRange = Abilities.v(p, 2, "beam-range", 45);
-        double aim = Abilities.v(p, 2, "aim-at-enemies-chance", 0.5);
-        List<String> darkness = Abilities.list(p, 2, "effects");
-        Set<String> protectedMats = new HashSet<>(Abilities.list(p, 2, "protected-materials"));
+        int R = Math.max(12, (int) v("radius", 30));
+        int dur = Abilities.ticks(p, v("seconds", 60) * Aegis.I.getConfig().getDouble("ults.domain-duration-multiplier", 3.0));
+        int perTick = Math.max(200, (int) v("blocks-per-tick", 1500));
+        boolean restore = pl.getConfig().getBoolean("ults.domain.restore", true);
+        int interval = Math.max(5, (int) v("beam-interval-ticks", 40));
+        int beams = (int) v("beams-per-interval", 3);
+        double beamDmg = v("beam-damage", 6.0);
+        double beamRange = v("beam-range", 45);
+        double aim = v("aim-at-enemies-chance", 0.5);
+        List<String> darkness = pl.getConfig().getStringList("ults.domain.effects");
+        Set<String> protectedMats = new HashSet<>(pl.getConfig().getStringList("ults.domain.protected-materials"));
 
         // the portal sits a few blocks in front of you, so you stand on the plaza facing it
         World w = p.getWorld();
         Location cl = p.getLocation();
         BlockFace face = p.getFacing();
-        int offset = (int) Abilities.v(p, 2, "center-offset", 5);
+        int offset = (int) v("center-offset", 5);
         int px = cl.getBlockX() + face.getModX() * offset, pz = cl.getBlockZ() + face.getModZ() * offset;
         int py = cl.getBlockY() - 1;
         for (int y = cl.getBlockY() - 1; y >= cl.getBlockY() - 6; y--) {
@@ -57,22 +60,22 @@ final class Domain {
         }
 
         AncientCity.Opts opts = new AncientCity.Opts(
-                Abilities.v(p, 2, "ruin-amount", 1.0), Abilities.v(p, 2, "building-density", 1.0), protectedMats,
-                (int) Abilities.v(p, 2, "portal-inner-width", 3), (int) Abilities.v(p, 2, "portal-inner-height", 5),
-                Abilities.v(p, 2, "vein-chance", 0.35), Abilities.v(p, 2, "sensor-chance", 0.03),
-                Abilities.v(p, 2, "calibrated-chance", 0.015), Abilities.v(p, 2, "shrieker-chance", 0.01),
-                Abilities.v(p, 2, "catalyst-chance", 0.015));
+                v("ruin-amount", 1.0), v("building-density", 1.0), protectedMats,
+                (int) v("portal-inner-width", 3), (int) v("portal-inner-height", 5),
+                v("vein-chance", 0.35), v("sensor-chance", 0.03),
+                v("calibrated-chance", 0.015), v("shrieker-chance", 0.01),
+                v("catalyst-chance", 0.015));
         AncientCity city = AncientCity.plan(w, px, pz, py, R, face, new Random(System.nanoTime() ^ pl.getName().hashCode()), opts);
 
         // ---- obsidian dome sealing the whole domain (placed first, restored with the city)
         Map<AncientCity.Pos, BlockData> domeBlocks = new LinkedHashMap<>();
-        if (pl.getConfig().getBoolean(Abilities.path(p, 2, "dome"), true)) {
-            Material dm = Material.matchMaterial(pl.getConfig().getString(Abilities.path(p, 2, "dome-material"), "OBSIDIAN"));
+        if (pl.getConfig().getBoolean("ults.domain.dome", true)) {
+            Material dm = Material.matchMaterial(pl.getConfig().getString("ults.domain.dome-material", "OBSIDIAN"));
             if (dm == null || !dm.isBlock()) dm = Material.OBSIDIAN;
             BlockData domeData = dm.createBlockData();
-            int thick = Math.max(1, (int) Abilities.v(p, 2, "dome-thickness", 2));
-            int gap = Math.max(0, (int) Abilities.v(p, 2, "dome-gap", 1));
-            int below = Math.max(0, (int) Abilities.v(p, 2, "dome-depth", 10));
+            int thick = Math.max(1, (int) v("dome-thickness", 2));
+            int gap = Math.max(0, (int) v("dome-gap", 1));
+            int below = Math.max(0, (int) v("dome-depth", 10));
             double rin = R + gap, rout = rin + thick;
             int ext = (int) Math.ceil(rout);
             for (int dy = -below; dy <= ext; dy++) {
@@ -142,7 +145,7 @@ final class Domain {
             int t = 0;
             @Override public void run() {
                 Player caster = Bukkit.getPlayer(id);
-                if (caster == null || t >= dur) { cancel(); restoreAll.run(); return; }
+                if (caster == null || t >= dur) { cancel(); restoreAll.run(); if (caster != null) UltImpl.finish(caster, "domain"); return; }
                 if (t % 20 == 0) {
                     for (Player q : w.getPlayers()) {
                         if (q.equals(caster) || q.isDead() || Abilities.trusts(caster, q)) continue;

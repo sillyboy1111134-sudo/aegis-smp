@@ -44,24 +44,20 @@ Only one can ever be crafted (heavy core in the top middle, a netherite block on
 Shift + right-click switches Breach II / Density II, F dashes 10 blocks, 3 airborne hits shred 80 durability off every armor piece, breaks shields like an axe, sword attack speed, always Wind Burst I, hits are capped at 5 hearts.
 Admin: `/aegis megamace give [player]`, `/aegis megamace reset`. Numbers are under `megamace` in `config.yml`.
 
-## Binding Vows (/vow)
-Permanent sacrifices for permanent gains. `/vow list`, `/vow info <vow>`, `/vow take <vow> ...` then `/vow confirm`, `/vow status`.
-A vow is binding: it can never be taken back, and abilities/passives a vow touched are locked in (a buffed ability or passive can't be sacrificed later). Vows stay when you reroll your class: they keep applying to the same ability and passive slots of your new class, and vows can still never push damage past 5 hearts.
-- **Exchange** (1 ability): double the other ability's damage or duration (never above 5 hearts of damage). Agni's Fireball charges in half the time instead.
-- **Focus** (2 passives): one ability gets -40% cooldown and +50% duration.
-- **Kinship** (1 passive): another passive becomes 50% stronger.
-- **Blood** (2 hearts): all cooldowns -25%.
-- **Phoenix** (1 ability): survive a killing blow with 3 hearts, every 15 minutes.
-Limits are under `vows` in `config.yml`.
-
 Forced Duel (Ymir) uses a 10 block radius arena (`duel-radius`) with visible walls for everyone. The Mega Mace dash keeps your momentum (`dash-carry`).
 
-## Cooldowns, vows and ultimates
-- Cooldowns only start recharging once the ability has ended (`general.cooldown-after-ability`). Potion effects an ability takes away (Jackpot's Luck of the Draw, Rogue's Stealth) are given back afterwards with the time they had left.
-- Binding vows need max energy (`vows.min-energy`). Admins remove them with `/vow remove <player> [vow]` (or `/aegis vow clear <player>`).
-- **Ultimates (base only):** at max energy `/ult take <ultimate> <1|2> <passive> <passive>` gives up one ability and two passives for an ultimate from any class; it takes that ability's place. Ultimates and vows exclude each other. Admins: `/ult remove <player>`. The ultimates themselves are registered in `Ults.init()`.
+## Cooldowns
+Cooldowns only start recharging once the ability has ended (`general.cooldown-after-ability`). Potion effects an ability takes away (Jackpot's Luck of the Draw, Rogue's Stealth) are given back afterwards with the time they had left. Binding vows were removed.
 
-## Ultimates
-`/ult list` shows them. At max energy: `/ult take <ultimate> <passive> <passive>` then `/ult confirm`. The ultimate replaces your LAST ability (Azaroth's replaces the first); below max energy the normal ability comes back but the two passives stay lost. Permanent (admins: `/ult remove <player>`), and it excludes binding vows.
-Bloodbath (Icor), Indomitable (Ymir), Tides of the Abyss (Varuna), A Piece of Hell (Agni), Workshop (Hephaestus), Sky Ruler (Boreus), True Guardian of the Deep (Azaroth), Golden God (Midas), Shadow Manipulation (Rogue), Idol Death Gamble (Jackpot), Avoidance of Fate (Fateweaver), Supreme Singularity (Singularity), Ares' Wrath (Spartan), The Flow of Time (Chrono), Waves of Desolation (Moander), Seismic Tremor (Dolus), Domain of the World Tree (Yggdrasil), Chains of Fate (Shackled), Defiant Rage (Berserker), Sword God (Samurai).
+## Ultimates and the Awakening Stone
+Every class has exactly ONE ultimate: its own. Change class and your ultimate changes with it. Right-click an **Awakening Stone** at max energy to awaken it for good. It costs nothing: no passives or abilities are sacrificed. (`/aegis give <player> stone`, optional recipe under `recipes.awakening`.)
+At max energy the ultimate takes the place of one ability; below max energy your normal ability is back.
+- Replaces the first ability: Shackled (Chains of Fate replaces Enchain), Yggdrasil (Domain of the World Tree), Agni, Azaroth (Warden's Domain; the second ability is the Sonic Beam, 2.5 hearts).
+- Dolus: Seismic Tremor becomes a second ability (Dolus normally has one).
+- Passive ultimates replace nothing and trigger by themselves at max energy: Berserker (Defiant Rage), Fateweaver (Avoidance of Fate, 3 lives).
+- Everyone else: replaces the last ability.
+`/ult` shows yours, `/ult list` shows all. Admins: `/ult grant <player>`, `/ult remove <player>`. Tuning is under `ults` in `config.yml`.
+Rogue's Shadow Manipulation clones wear your gear, strafe, jump-crit, w-tap, block with a shield, eat golden apples under half health and only ever attack players.
+Spear hits are capped at 5 hearts (`spear.damage-cap`).
+Bloodbath (Icor), Indomitable (Ymir), Tides of the Abyss (Varuna), A Piece of Hell (Agni), Workshop (Hephaestus), Sky Ruler (Boreus), Warden's Domain (Azaroth), Golden God (Midas), Shadow Manipulation (Rogue), Idol Death Gamble (Jackpot), Avoidance of Fate (Fateweaver), Supreme Singularity (Singularity), Ares' Wrath (Spartan), The Flow of Time (Chrono), Waves of Desolation (Moander), Seismic Tremor (Dolus), Domain of the World Tree (Yggdrasil), Chains of Fate (Shackled), Defiant Rage (Berserker), Sword God (Samurai).
 Domains (Agni, Hephaestus, Jackpot, Yggdrasil, Moander, Rogue's shadow pool) place temporary blocks that are restored when they end. Casino: drop a `.schem` into `plugins/AegisSMP/` as `casino.schem`.

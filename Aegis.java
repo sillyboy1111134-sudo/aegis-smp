@@ -48,8 +48,6 @@ public final class Aegis extends JavaPlugin {
             PluginCommand cmd = getCommand(n);
             if (cmd != null) { cmd.setExecutor(c); cmd.setTabCompleter(c); }
         }
-        PluginCommand vowCmd = getCommand("vow");
-        if (vowCmd != null) { VowCommand vc = new VowCommand(); vowCmd.setExecutor(vc); vowCmd.setTabCompleter(vc); }
         PluginCommand ultCmd = getCommand("ult");
         if (ultCmd != null) { UltCommand uc = new UltCommand(); ultCmd.setExecutor(uc); ultCmd.setTabCompleter(uc); }
         Ults.init();
@@ -99,11 +97,8 @@ public final class Aegis extends JavaPlugin {
                 d.energy = s.getInt(key + ".energy", getConfig().getInt("general.starting-energy", 2));
                 d.cmdMode = s.getBoolean(key + ".cmd", false);
                 for (String t : s.getStringList(key + ".trusted")) d.trusted.add(UUID.fromString(t));
-                ConfigurationSection vs = s.getConfigurationSection(key + ".vows");
-                if (vs != null) for (String vid : vs.getKeys(false)) d.vows.put(vid, vs.getString(vid, ""));
-                d.ult = s.getString(key + ".ult.id", null);
-                d.ultSlot = s.getInt(key + ".ult.slot", 0);
-                d.ultSac = s.getString(key + ".ult.sac", "");
+                // old saves: anyone who had picked an ultimate counts as awakened (no passives are lost any more)
+                d.awakened = s.getBoolean(key + ".awakened", s.getString(key + ".ult.id", null) != null);
                 data.put(id, d);
             } catch (Exception ignored) { }
         }
@@ -120,8 +115,7 @@ public final class Aegis extends JavaPlugin {
             List<String> t = new ArrayList<>();
             for (UUID u : d.trusted) t.add(u.toString());
             y.set(k + ".trusted", t);
-            for (Map.Entry<String, String> v : d.vows.entrySet()) y.set(k + ".vows." + v.getKey(), v.getValue());
-            if (d.ult != null) { y.set(k + ".ult.id", d.ult); y.set(k + ".ult.slot", d.ultSlot); y.set(k + ".ult.sac", d.ultSac); }
+            y.set(k + ".awakened", d.awakened);
         }
         try { getDataFolder().mkdirs(); y.save(dataFile); } catch (IOException ex) { getLogger().warning("Could not save data.yml: " + ex.getMessage()); }
     }

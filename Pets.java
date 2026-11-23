@@ -42,36 +42,6 @@ final class Pets {
         return false;
     }
 
-    static final java.util.Set<UUID> ultPets = new java.util.HashSet<>();
-
-    /** Azaroth's ultimate: a Warden with normal stats that fights like a wolf for a while (or until it dies). */
-    static boolean summonUlt(Player p, int lifeTicks) {
-        if (alive(p)) { Abilities.msg(p, "Your Warden is still out."); return false; }
-        Location loc = p.getLocation().clone();
-        loc.add(loc.getDirection().setY(0).normalize().multiply(2));
-        final UUID owner = p.getUniqueId();
-        Warden w = p.getWorld().spawn(loc, Warden.class, wd -> {
-            wd.customName(Component.text("True Guardian", NamedTextColor.DARK_AQUA));
-            wd.setCustomNameVisible(true);
-            wd.setPersistent(false);
-            wd.setRemoveWhenFarAway(false);
-            wd.getPersistentDataContainer().set(Aegis.I.petKey, PersistentDataType.STRING, owner.toString());
-        });
-        pets.put(owner, w.getUniqueId());
-        ultPets.add(w.getUniqueId());
-        w.clearAnger(p);
-        Fx.summonPet(w.getLocation());
-        p.getWorld().playSound(w.getLocation(), "entity.warden.emerge", 1.5f, 0.8f);
-        Bukkit.getScheduler().runTaskLater(Aegis.I, () -> {
-            if (!w.isValid()) return;
-            ultPets.remove(w.getUniqueId());
-            pets.remove(owner, w.getUniqueId());
-            Fx.burst(w.getLocation().add(0, 1, 0), org.bukkit.Particle.SCULK_SOUL, 40, .3);
-            w.remove();
-        }, lifeTicks);
-        return true;
-    }
-
     static boolean summon(Player p) {
         double hpMul = Abilities.v(p, 1, "health-multiplier", 0.5);
         Location loc = p.getLocation().clone();
@@ -98,15 +68,9 @@ final class Pets {
         if (owner == null) return;
         pets.remove(owner);
         target.remove(owner);
-        boolean ult = ultPets.remove(w.getUniqueId());
         Player o = Bukkit.getPlayer(owner);
         if (o == null) return;
         PlayerData d = Aegis.I.pd(o);
-        if (ult) {   // the ultimate warden fell: the ultimate's cooldown starts now
-            if (d.ultSlot > 0) d.endActive(d.ultSlot);
-            o.sendMessage(Component.text("Your True Guardian has fallen.", NamedTextColor.RED));
-            return;
-        }
         d.startCd(1, Abilities.v(o, 1, "cooldown-after-death", 180));
         o.sendMessage(Component.text("Your Warden has fallen. Deep's Call is on cooldown.", NamedTextColor.RED));
     }

@@ -8,10 +8,10 @@ import org.bukkit.inventory.ShapedRecipe;
 
 import java.util.List;
 
-/** Optional crafting recipes for the Energy Marble ("energy") and Class Reroller ("reroll"). Off by default. */
+/** Optional crafting recipes for the Energy Marble ("energy"), Class Reroller ("reroll") and Awakening Stone ("awakening"). Off by default. */
 final class Recipes {
     static void register() {
-        for (String kind : new String[]{"energy", "reroll"}) {
+        for (String kind : new String[]{"energy", "reroll", "awakening"}) {
             NamespacedKey key = new NamespacedKey(Aegis.I, "recipe_" + kind);
             Bukkit.removeRecipe(key);
             ConfigurationSection s = Aegis.I.getConfig().getConfigurationSection("recipes." + kind);

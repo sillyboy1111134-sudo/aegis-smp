@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 final class Items {
-    /** kind = "energy" or "reroll". They are PLAYER_HEADs; the resource pack gives them the orb look. */
+    /** kind = "energy", "reroll" or "awakening". They are PLAYER_HEADs; the resource pack gives them the orb look. */
     static ItemStack make(String kind, int amount) {
         Aegis pl = Aegis.I;
         ItemStack it = new ItemStack(Material.PLAYER_HEAD, Math.max(1, amount));
@@ -30,11 +30,17 @@ final class Items {
             m.setPlayerProfile(pr);
         }
 
-        boolean energy = kind.equals("energy");
-        String name = pl.getConfig().getString("items." + kind + ".name", energy ? "Energy Marble" : "Class Reroller");
-        m.displayName(Component.text(name, energy ? NamedTextColor.AQUA : NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
-        m.lore(List.of(
-                Component.text(energy ? "Right-click: +1 energy" : "Right-click: reroll your class", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
+        boolean energy = kind.equals("energy"), awakening = kind.equals("awakening");
+        String name = pl.getConfig().getString("items." + kind + ".name", energy ? "Energy Marble" : awakening ? "Awakening Stone" : "Class Reroller");
+        m.displayName(Component.text(name, energy ? NamedTextColor.AQUA : awakening ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
+        if (awakening) {
+            m.lore(List.of(
+                    Component.text("Right-click at max energy: awaken your class's ultimate", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
+                    Component.text("Costs no passives. The ultimate follows you when you change class.", NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false)));
+        } else {
+            m.lore(List.of(
+                    Component.text(energy ? "Right-click: +1 energy" : "Right-click: reroll your class", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
+        }
 
         if (pl.getConfig().getBoolean("items.use-item-model", true)) {
             try { m.setItemModel(new NamespacedKey("aegis", kind)); } catch (Throwable ignored) { }
@@ -44,7 +50,7 @@ final class Items {
         return it;
     }
 
-    /** "energy", "reroll" or null. */
+    /** "energy", "reroll", "awakening" or null. */
     static String kind(ItemStack s) {
         if (s == null || s.getType() != Material.PLAYER_HEAD || !s.hasItemMeta()) return null;
         return s.getItemMeta().getPersistentDataContainer().get(Aegis.I.itemKey, PersistentDataType.STRING);

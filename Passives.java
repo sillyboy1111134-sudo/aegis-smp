@@ -22,7 +22,7 @@ final class Passives {
 
     static ConfigurationSection node(Player p, String pid) {
         ClassType t = Aegis.I.pd(p).type;
-        return t == null ? null : Vows.scalePassive(p, pid, node(t, pid));   // stronger when a vow bound it
+        return t == null ? null : node(t, pid);
     }
 
     /** Energy needed for passive #idx. First = 0, last = max energy, rest spread evenly. */
@@ -32,22 +32,22 @@ final class Passives {
         return n <= 1 ? 0 : Math.round((float) idx * max / (n - 1));
     }
 
-    /** Passives sacrificed to a vow are gone for good. */
+    /** Passives unlocked by energy. Nothing is ever sacrificed any more (awakening an ultimate costs no passives). */
     static List<String> unlocked(Player p) {
-        List<String> r = unlockedRaw(p);
-        if (!Aegis.I.pd(p).vows.isEmpty()) r.removeIf(Vows.state(p).sacPassives::contains);
-        if (Aegis.I.pd(p).ult != null) r.removeIf(Ults.sacPassives(p)::contains);   // given up for the ultimate
-        return r;
-    }
-
-    /** Unlocked by energy, whether or not a vow sacrificed them. */
-    static List<String> unlockedRaw(Player p) {
         PlayerData d = Aegis.I.pd(p);
         List<String> r = new ArrayList<>();
         if (d.type == null) return r;
         for (int i = 0; i < d.type.passives.length; i++)
             if (d.energy >= unlockAt(d.type, i)) r.add(d.type.passives[i]);
         return r;
+    }
+
+    /** Binding vows are gone: take away the max-health penalty a Vow of Blood may have left on the player. */
+    private static void removeOldVowHearts(Player p) {
+        AttributeInstance a = p.getAttribute(Attribute.MAX_HEALTH);
+        if (a == null) return;
+        NamespacedKey key = new NamespacedKey(Aegis.I, "vow_hearts");
+        for (AttributeModifier m : new ArrayList<>(a.getModifiers())) if (m.getKey().equals(key)) a.removeModifier(m);
     }
 
     static boolean has(Player p, String pid) { return unlocked(p).contains(pid); }
@@ -76,7 +76,7 @@ final class Passives {
     static void refresh(Player p) {
         PlayerData d = Aegis.I.pd(p);
         NewClasses.syncKillHearts(p);
-        Vows.syncHearts(p);
+        removeOldVowHearts(p);
         for (PotionEffectType t : new ArrayList<>(d.applied)) {
             PotionEffect e = p.getPotionEffect(t);
             if (e != null && e.isInfinite()) p.removePotionEffect(t);

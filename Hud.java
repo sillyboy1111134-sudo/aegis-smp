@@ -19,7 +19,9 @@ final class Hud {
         boolean glyph = Aegis.I.getConfig().getString("hud.mode", "glyph").equalsIgnoreCase("glyph");
 
         Component line = Component.empty();
-        int abilities = t.a2 == null ? 1 : 2;
+        int ultSlot = Ults.slot(p);
+        Ults.Def ud = Ults.def(p);
+        int abilities = (t.a2 == null && ultSlot != 2) ? 1 : 2;
         for (int n = 1; n <= abilities; n++) {
             double f = d.fraction(n);
             int step = f >= 1.0 ? 8 : Math.max(0, Math.min(7, (int) Math.floor(f * 8)));
@@ -27,7 +29,8 @@ final class Hud {
                 char c = (char) (0xE000 + t.ordinal() * 18 + (n - 1) * 9 + step);
                 line = line.append(Component.text(String.valueOf(c)).font(Key.key("aegis", "hud")).color(NamedTextColor.WHITE));
             } else {
-                line = line.append(Component.text(t.abilityName(n) + " " + bar(f), f >= 1.0 ? NamedTextColor.GREEN : NamedTextColor.GOLD));
+                String nm = (n == ultSlot && ud != null) ? ud.name() : t.abilityName(n);
+                line = line.append(Component.text(nm + " " + bar(f), f >= 1.0 ? (n == ultSlot ? NamedTextColor.LIGHT_PURPLE : NamedTextColor.GREEN) : NamedTextColor.GOLD));
             }
             line = line.append(Component.text("  "));
         }

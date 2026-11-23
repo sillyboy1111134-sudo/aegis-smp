@@ -49,7 +49,7 @@ final class Abilities {
         ClassType t = pl().pd(p).type;
         return "classes." + (t == null ? "none" : t.id) + ".a" + n + "." + key;
     }
-    static double v(Player p, int n, String key, double def) { return Vows.scale(p, n, key, cfg().getDouble(path(p, n, key), def)); }
+    static double v(Player p, int n, String key, double def) { return cfg().getDouble(path(p, n, key), def); }
     static String s(Player p, int n, String key, String def) { return cfg().getString(path(p, n, key), def); }
     static List<String> list(Player p, int n, String key) { return cfg().getStringList(path(p, n, key)); }
 
@@ -206,7 +206,6 @@ final class Abilities {
             case VARUNA -> n == 2 ? secs(p, v(p, 2, "seconds", 5)) : 0;
             case AGNI -> n == 1 ? secs(p, v(p, 1, "seconds", 20)) : 0;
             case BOREUS -> n == 2 ? secs(p, v(p, 2, "seconds", 20)) : 0;
-            case AZAROTH -> n == 2 ? secs(p, v(p, 2, "seconds", 60)) : 0;
             case MIDAS -> n == 2 ? secs(p, v(p, 2, "seconds", 120)) : 0;
             case ROGUE -> n == 1 ? secs(p, v(p, 1, "seconds", 10)) : 0;
             case YGGDRASIL -> n == 1 ? secs(p, v(p, 1, "seconds", 20)) : 0;
@@ -220,10 +219,10 @@ final class Abilities {
     static void use(Player p, int n) {
         PlayerData d = pl().pd(p);
         ClassType t = d.type;
-        if (t == null || d.rolling || (n == 2 && t.a2 == null) || p.isDead()) return;
+        if (t == null || d.rolling || p.isDead()) return;
         if (Status.on(Status.stun, p) || Status.on(Status.freeze, p)) { msg(p, "You are stunned!"); return; }
-        if (Ults.slot(p) == n) { Ults.cast(p, n); return; }   // this slot was replaced by an ultimate
-        if (!d.vows.isEmpty() && Vows.state(p).sacAbilities.contains(n)) { msg(p, t.abilityName(n) + " was sacrificed to a binding vow."); return; }
+        if (Ults.slot(p) == n) { Ults.cast(p, n); return; }   // this slot is (or became) the awakened ultimate
+        if (n == 2 && t.a2 == null) return;
 
         if (t == ClassType.AZAROTH && n == 1 && Pets.alive(p)) { msg(p, "Your Warden is still alive."); return; }
         boolean toggle = (t == ClassType.YMIR && n == 1 && duels.containsKey(p.getUniqueId()))
@@ -248,7 +247,7 @@ final class Abilities {
             case AGNI -> n == 1 ? magmaBath(p) : fireball(p);
             case HEPHAESTUS -> n == 1 ? shatter(p) : piercing(p);
             case BOREUS -> n == 1 ? breezyDash(p) : overdrive(p);
-            case AZAROTH -> n == 1 ? deepsCall(p) : Domain.start(p);
+            case AZAROTH -> n == 1 ? deepsCall(p) : wardenBeam(p);
             case MIDAS -> n == 1 ? goldenTouch(p) : bounty(p);
             case ROGUE -> n == 1 ? NewClasses.stealth(p) : NewClasses.shadowStep(p);
             case YGGDRASIL -> n == 1 ? NewClasses.vitality(p) : NewClasses.worldTreeRoot(p);
@@ -828,7 +827,7 @@ final class Abilities {
         double dist = v(p, 1, "distance", 30), speed = v(p, 1, "speed", 2.0);
         Vector dir = p.getEyeLocation().getDirection().normalize();
         pl().pd(p).cd.remove("mace");                       // refreshes the axe-smash cooldown
-        p.setFallDistance(0);
+        CombatListener.resetFall(p);
         snd(p, "entity.breeze.wind_burst");
         new BukkitRunnable() {
             double travelled = 0;
@@ -841,7 +840,7 @@ final class Abilities {
                     return;
                 }
                 p.setVelocity(dir.clone().multiply(speed));
-                p.setFallDistance(0);
+                CombatListener.resetFall(p);
                 Fx.dashTrail(p);
                 travelled += speed;
             }
@@ -896,6 +895,20 @@ final class Abilities {
         if (!Pets.summon(p)) return false;
         pl().pd(p).startKey("a1", 86400);   // stays "on cooldown" while the Warden lives; real cooldown starts when it dies
         return false;
+    }
+
+    /** Azaroth's Sonic Beam: a warden beam along your look direction, 2.5 hearts of armor-ignoring damage. */
+    static boolean wardenBeam(Player p) {
+        double range = v(p, 2, "range", 40), dmg = v(p, 2, "damage", 5.0);
+        Location eye = p.getEyeLocation();
+        Vector dir = eye.getDirection().normalize();
+        World w = p.getWorld();
+        RayTraceResult hit = w.rayTrace(eye, dir, range, FluidCollisionMode.NEVER, true, 0.6, en -> validTarget(p, en) && !Pets.isPet(en));
+        Location end = hit == null ? eye.clone().add(dir.clone().multiply(range)) : hit.getHitPosition().toLocation(w);
+        Fx.sonicBeam(eye.clone().subtract(0, 0.3, 0), end);
+        w.playSound(eye, "entity.warden.sonic_boom", 1.3f, 1f);
+        if (hit != null && hit.getHitEntity() instanceof LivingEntity le) hurt(le, dmg, p);
+        return true;
     }
 
     static boolean goldenTouch(Player p) {

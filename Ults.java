@@ -1,24 +1,32 @@
 package dev.aegis;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.title.Title;
 import org.bukkit.entity.Player;
 
-import java.util.HashSet;
+import java.time.Duration;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Ultimates. At max energy a player may give up one ability and two passives for an ultimate (from ANY class).
- * The ultimate takes the place of the last ability (Azaroth's: the first). Below max energy the ultimate sleeps:
- * the normal ability is back, but the two passives stay lost. Choosing one is permanent (admins can remove it)
- * and excludes binding vows. The ultimates themselves are in UltImpl.
+ * Ultimates. Every class has exactly ONE ultimate (its own); switching class switches the ultimate too.
+ * An Awakening Stone (used at max energy) awakens it for good. It costs nothing: no passives are lost.
+ * While you are at max energy the ultimate takes the place of one ability (see slotFor); below max energy the
+ * normal ability is back. Passive ultimates (Berserker, Fateweaver) replace nothing and just trigger by themselves.
+ * The ultimates themselves are in UltImpl.
  */
 final class Ults {
     interface Handler { boolean cast(Player p); }
 
+    /** first = replaces the first ability (otherwise the last one). passive = triggers by itself, replaces no ability. */
     record Def(String id, String name, String desc, double cooldown, double active, boolean first, boolean passive, Handler handler, Handler recast) { }
 
     static final Map<String, Def> REGISTRY = new LinkedHashMap<>();
+    /** class -> id of its ultimate */
+    static final Map<ClassType, String> OF = new EnumMap<>(ClassType.class);
 
     static void register(String id, String name, String desc, double cooldown, double active, boolean first, boolean passive, Handler handler, Handler recast) {
         REGISTRY.put(id, new Def(id, name, desc, cooldown, active, first, passive, handler, recast));
@@ -28,31 +36,42 @@ final class Ults {
 
     static double cooldown(Def def) { return Aegis.I.getConfig().getDouble("ults." + def.id() + ".cooldown", def.cooldown()); }
 
-    /** The slot an ultimate goes into for this class: the last ability, or the first for "first" ultimates. */
-    static int slotFor(ClassType t, Def def) { return def.first() ? 1 : (t.a2 != null ? 2 : 1); }
+    /** The ultimate of this class (whether or not the player has awakened it). */
+    static Def of(ClassType t) { return t == null ? null : REGISTRY.get(OF.get(t)); }
 
-    /** The ability slot the ultimate currently replaces; 0 while the player is below max energy (the normal ability is back). */
+    /** The player's ultimate once awakened, otherwise null. */
+    static Def def(Player p) {
+        PlayerData d = Aegis.I.pd(p);
+        if (!d.awakened || d.type == null || !Aegis.I.getConfig().getBoolean("ults.enabled", true)) return null;
+        return of(d.type);
+    }
+
+    /** The ability slot the ultimate takes over for this class (0 = none, for passive ultimates). Dolus has no second ability: the ultimate IS one. */
+    static int slotFor(ClassType t, Def def) {
+        if (def == null || def.passive()) return 0;
+        if (t == ClassType.DOLUS) return 2;
+        return def.first() ? 1 : (t.a2 != null ? 2 : 1);
+    }
+
+    /** The slot of the player's awakened ultimate whether or not it is currently usable (0 if none). */
+    static int slotOf(Player p) {
+        PlayerData d = Aegis.I.pd(p);
+        return slotFor(d.type, def(p));
+    }
+
+    /** The ability slot the ultimate currently owns; 0 while it sleeps (not awakened, or below max energy). */
     static int slot(Player p) {
         PlayerData d = Aegis.I.pd(p);
-        if (d.ult == null || d.energy < Aegis.I.maxEnergy()) return 0;
-        return d.ultSlot;
+        if (d.energy < Aegis.I.maxEnergy()) return 0;
+        return slotOf(p);
     }
 
-    /** Passives given up for the ultimate (stored as slots, so they survive a class reroll). Stay lost even below max energy. */
-    static Set<String> sacPassives(Player p) {
-        Set<String> r = new HashSet<>();
-        PlayerData d = Aegis.I.pd(p);
-        if (d.ult == null || d.type == null) return r;
-        for (String tok : d.ultSac.split(",")) {
-            String id = Vows.pidOf(d.type, tok);
-            if (id != null) r.add(id);
-        }
-        return r;
-    }
+    /** Is the awakened ultimate usable right now (max energy)? */
+    static boolean ready(Player p) { return def(p) != null && Aegis.I.pd(p).energy >= Aegis.I.maxEnergy(); }
 
     static void cast(Player p, int n) {
         PlayerData d = Aegis.I.pd(p);
-        Def def = REGISTRY.get(d.ult);
+        Def def = def(p);
         if (def == null) { Abilities.msg(p, "Your ultimate is not available."); return; }
         if (def.passive()) { Abilities.msg(p, def.name() + " triggers by itself."); return; }
         if (def.recast() != null && UltImpl.isActive(p, def.id())) { def.recast().cast(p); return; }
@@ -65,47 +84,51 @@ final class Ults {
         }
     }
 
-    static String usage() { return "/ult take <ultimate> <passive> <passive>"; }
-
-    static Vows.Prep prepare(Player p, String id, String[] a) {
+    /** Awakening Stone: awaken the ultimate of your class. Needs max energy. Returns true if the stone should be used up. */
+    static boolean awaken(Player p) {
         PlayerData d = Aegis.I.pd(p);
         ClassType t = d.type;
-        if (t == null || d.rolling) return Vows.Prep.err("You need a class first.");
-        if (!Aegis.I.getConfig().getBoolean("ults.enabled", true)) return Vows.Prep.err("Ultimates are disabled.");
-        if (d.ult != null) return Vows.Prep.err("You already chose an ultimate.");
-        if (!d.vows.isEmpty()) return Vows.Prep.err("You have binding vows. Ultimates can't be combined with them.");
+        if (t == null || d.rolling) { Abilities.msg(p, "You need a class first."); return false; }
+        if (!Aegis.I.getConfig().getBoolean("ults.enabled", true)) { Abilities.msg(p, "Ultimates are disabled."); return false; }
+        if (d.awakened) { Abilities.msg(p, "Your ultimate is already awakened."); return false; }
         int need = Aegis.I.maxEnergy();
-        if (d.energy < need) return Vows.Prep.err("You need " + need + " energy to choose an ultimate.");
-        Def def = REGISTRY.get(id);
-        if (def == null) return Vows.Prep.err("Unknown ultimate. Use /ult list.");
-        if (a.length < 2) return Vows.Prep.err("Usage: " + usage());
-        String p1 = a[0].toLowerCase(), p2 = a[1].toLowerCase();
-        if (p1.equals(p2)) return Vows.Prep.err("Pick two different passives.");
-        for (String pid : new String[]{p1, p2})
-            if (!Passives.unlockedRaw(p).contains(pid)) return Vows.Prep.err("'" + pid + "' is not one of your unlocked passives.");
-        int slot = slotFor(t, def);
-        return Vows.Prep.ok(slot + ";" + Vows.idx(t, p1) + "," + Vows.idx(t, p2),
-                "You permanently lose " + t.abilityName(slot) + " (while you have max energy), " + Vows.passiveName(t, p1) + " and " + Vows.passiveName(t, p2)
-                        + ". " + def.name() + " takes the place of " + t.abilityName(slot) + ". Below max energy your ability returns but the passives stay lost. You can no longer take binding vows.");
+        if (d.energy < need) { Abilities.msg(p, "You need " + need + " energy to awaken your ultimate."); return false; }
+        Def def = of(t);
+        if (def == null) { Abilities.msg(p, "Your class has no ultimate."); return false; }
+        grant(p);
+        return true;
     }
 
-    static void apply(Player p, String id, String param) {
+    /** Awakens without any checks (the stone, or an admin). */
+    static void grant(Player p) {
         PlayerData d = Aegis.I.pd(p);
-        String[] parts = param.split(";");
-        d.ult = id;
-        d.ultSlot = Integer.parseInt(parts[0]);
-        d.ultSac = parts.length > 1 ? parts[1] : "";
-        d.cd.remove("a" + d.ultSlot);
+        d.awakened = true;
+        d.cd.remove("a1");
+        d.cd.remove("a2");
         Passives.refresh(p);
         Aegis.I.saveData();
+        Def def = of(d.type);
+        if (def == null) return;
+        p.showTitle(Title.title(Component.text("AWAKENED", NamedTextColor.LIGHT_PURPLE, TextDecoration.BOLD),
+                Component.text(def.name(), NamedTextColor.GOLD), Title.Times.times(Duration.ofMillis(300), Duration.ofSeconds(3), Duration.ofSeconds(1))));
+        p.getWorld().playSound(p.getLocation(), "block.beacon.activate", 1f, 0.7f);
+        p.getWorld().playSound(p.getLocation(), "entity.evoker.prepare_summon", 1f, 0.8f);
+        Fx.energy(p);
+        int slot = slotFor(d.type, def);
+        String where = def.passive() ? "It triggers by itself while you are at max energy."
+                : "At max energy it " + (d.type == ClassType.DOLUS ? "becomes your second ability." : "takes the place of " + d.type.abilityName(slot) + ".");
+        p.sendMessage(Component.text(def.name() + ": " + def.desc(), NamedTextColor.AQUA));
+        p.sendMessage(Component.text(where + " Below max energy your normal abilities are back. You keep every passive, and the ultimate follows you when you change class.", NamedTextColor.YELLOW));
     }
 
+    /** Admin: take the awakening away again. */
     static void remove(Player p) {
         PlayerData d = Aegis.I.pd(p);
-        d.cd.remove("a" + d.ultSlot);
-        d.ult = null;
-        d.ultSlot = 0;
-        d.ultSac = "";
+        UltImpl.cleanup(p);
+        d.cd.remove("a1");
+        d.cd.remove("a2");
+        d.cd.remove("ult");
+        d.awakened = false;
         Passives.refresh(p);
         Aegis.I.saveData();
     }

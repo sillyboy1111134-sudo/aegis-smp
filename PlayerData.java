@@ -11,11 +11,7 @@ public final class PlayerData {
     public int energy;
     public boolean cmdMode;
     public final Set<UUID> trusted = new HashSet<>();
-    public final Map<String, String> vows = new LinkedHashMap<>();   // binding vows: id -> parameters
-    Vows.State vowState;      // cache of what the vows add up to (null = recompute)
-    public String ult;        // chosen ultimate id (null = none)
-    public int ultSlot;       // ability slot (1 or 2) the ultimate replaced
-    public String ultSac = "";   // sacrificed passive slots, e.g. "1,3"
+    public boolean awakened;  // used an Awakening Stone: the ultimate of whatever class you are is unlocked (it needs max energy)
 
     final Map<String, long[]> cd = new HashMap<>();          // key -> {endMillis, totalMillis}
     final Set<PotionEffectType> applied = new HashSet<>();   // permanent effects we applied

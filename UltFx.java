@@ -26,7 +26,7 @@ final class UltFx {
             case "hell" -> 0xFF5722;
             case "workshop" -> 0xFF6D00;
             case "skyruler" -> 0x81D4FA;
-            case "guardian" -> 0x00ACC1;
+            case "guardian", "domain" -> 0x00ACC1;
             case "goldengod", "idolgamble", "flowtime" -> 0xFFC107;
             case "shadows" -> 0x2A0A3A;
             case "avoidance" -> 0xB388FF;
@@ -49,7 +49,7 @@ final class UltFx {
             case "hell", "defiantrage" -> Particle.FLAME;
             case "workshop" -> Particle.LAVA;
             case "skyruler" -> Particle.CLOUD;
-            case "guardian" -> Particle.SCULK_SOUL;
+            case "guardian", "domain" -> Particle.SCULK_SOUL;
             case "goldengod" -> Particle.WAX_ON;
             case "idolgamble" -> Particle.TOTEM_OF_UNDYING;
             case "shadows" -> Particle.SQUID_INK;

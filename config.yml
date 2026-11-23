@@ -65,6 +65,8 @@ items:
   reroll:
     name: "Class Reroller"
     texture: ""
+  awakening:
+    name: "Awakening Stone"   # right-click at max energy: awaken your class's ultimate (costs no passives)
 
 # Optional crafting recipes (shaped). Ingredient letters map to materials. Off by default.
 recipes:
@@ -78,6 +80,11 @@ recipes:
     amount: 1
     shape: ["EGE", "GNG", "EGE"]
     ingredients: {E: EMERALD_BLOCK, G: GOLD_BLOCK, N: NETHER_STAR}
+  awakening:   # Awakening Stone
+    enabled: false
+    amount: 1
+    shape: ["NEN", "ESE", "NEN"]
+    ingredients: {N: NETHERITE_INGOT, E: NETHER_STAR, S: ECHO_SHARD}
 
 # ============================================================
 #  CUSTOM ENCHANTS - only obtainable from enchanting tables, max-per-item per piece of gear.
@@ -318,36 +325,7 @@ classes:
       health-multiplier: 0.5     # pet has half a Warden's health
       damage-multiplier: 0.25    # and deals a quarter of its damage
       follow-teleport-distance: 20
-    a2:                      # Warden's Domain: an Ancient City rises around an inactive portal
-      armor-damage: 0
-      armor-repair: 0
-      cooldown: 120
-      seconds: 60
-      radius: 30                 # size of the domain (doubled)
-      center-offset: 5           # the portal is built this many blocks in front of you
-      portal-inner-width: 3      # reinforced-deepslate portal frame (inner size, the frame adds 2)
-      portal-inner-height: 5
-      building-density: 1.0      # 0 = no buildings, 2 = very crowded
-      ruin-amount: 1.0           # 0 = pristine city, 2 = mostly rubble
-      effects: ["darkness:1:6"]
-      beam-interval-ticks: 40    # warden beams (doubled: half as often)
-      beams-per-interval: 3
-      beam-damage: 6.0           # HP (3 hearts), ignores armor
-      beam-range: 45
-      aim-at-enemies-chance: 0.5
-      blocks-per-tick: 1500      # lower = less lag while the city is built
-      restore: true              # false = the city stays forever
-      vein-chance: 0.35          # sculk decoration on the ground
-      sensor-chance: 0.03
-      calibrated-chance: 0.015
-      shrieker-chance: 0.01      # decorative only - never summons a Warden
-      catalyst-chance: 0.015     # extra catalysts are added near the portal
-      protected-materials: [BEDROCK, REINFORCED_DEEPSLATE, END_PORTAL_FRAME]
-      dome: true                 # obsidian dome sealing the domain (removed with the city)
-      dome-material: OBSIDIAN
-      dome-thickness: 2
-      dome-gap: 1                # blocks between the domain radius and the dome's inside
-      dome-depth: 10             # how far below ground level the dome reaches (solid terrain is left alone)
+    a2: {armor-damage: 0, armor-repair: 0, cooldown: 15, range: 40, damage: 5.0}   # Sonic Beam: a warden beam, 5 HP = 2.5 hearts, ignores armor
     passives:
       wardens: {ignored-by: [WARDEN]}
       darkness: {when: hit, chance: 5, action: effect, effect: darkness, level: 1, seconds: 10}
@@ -535,6 +513,10 @@ classes:
 #                          | nether star
 #                          | breeze rod
 # Vanilla mace crafting is removed. /aegis megamace reset allows crafting it again.
+# Spears: a melee hit with any spear never deals more than this (abilities are not capped).
+spear:
+  damage-cap: 10.0            # 10 HP = 5 hearts
+
 megamace:
   enchant-level: 2            # Breach and Density level
   damage-cap: 10.0            # max HP per hit with the mace (10 = 5 hearts)
@@ -545,34 +527,72 @@ megamace:
   armor-hits: 5               # consecutive hits without touching the ground...
   armor-durability: 80        # ...damage this much durability on every armor piece
 
-# ---------------------------------------------------------------- BINDING VOWS  (/vow list)
-# Permanent sacrifices for permanent gains. A vow can never be taken back (they stay through class rerolls and apply to the same ability / passive slots of the new class; /aegis vow clear wipes them).
-vows:
-  enabled: true
-  max-vows: 2                    # per player
-  min-energy: 5                  # energy needed to take a vow (max energy)
-  heart-cost-hp: 4               # "2 hearts" = 4 HP
-  max-heart-sacrifice-hp: 8      # most health a player can ever give up (4 hearts)
-  damage-cap: 10.0               # vows never push an ability past this per hit (10 = 5 hearts)
-  passive-buff: 1.5              # Vow of Kinship: chances / amounts / effect strength x1.5
-  focus-cooldown: 0.6            # Vow of Focus: cooldown multiplier (x0.6 = -40%)
-  focus-duration: 1.5            # Vow of Focus: duration multiplier
-  blood-cooldown: 0.75           # Vow of Blood: all cooldowns x0.75
-  min-cooldown-mult: 0.5         # cooldowns never drop below half
-  phoenix-cooldown: 900          # seconds
-  phoenix-hearts: 3
-
-# ---------------------------------------------------------------- ULTIMATES  (/ult list)
-# At max energy a player can give up 1 ability and 2 passives for an ultimate from ANY class.
-# Ultimates and binding vows exclude each other. The ultimates themselves are added later;
-# per-ultimate settings go under ults.<id> (e.g. ults.<id>.cooldown overrides its cooldown).
+# ---------------------------------------------------------------- ULTIMATES  (/ult)
+# Every class has ONE ultimate. An Awakening Stone (right-click at max energy) awakens it; no passives are sacrificed and it
+# follows you when you change class. At max energy it takes the place of an ability (Shackled, Yggdrasil, Agni, Azaroth: the
+# first; Dolus: it becomes a second ability; everyone else: the last). Below max energy your normal abilities are back.
+# Berserker and Fateweaver have passive ultimates that replace nothing and trigger by themselves at max energy.
+# Every ultimate can be tuned here, e.g.  ults.bloodbath.radius / .seconds / .cooldown  (defaults are in the code).
+# Ultimates: chains (Shackled), desolation (Moander), flowtime (Chrono), bloodbath (Icor), defiantrage (Berserker), tremor (Dolus),
+#   swordgod (Samurai), indomitable (Ymir), tides (Varuna), hell (Agni), workshop (Hephaestus), skyruler (Boreus), domain (Azaroth),
+#   goldengod (Midas), shadows (Rogue), worldtree (Yggdrasil), idolgamble (Jackpot), avoidance (Fateweaver),
+#   supremesingularity (Singularity), areswrath (Spartan)
 ults:
   enabled: true
-  # Every ultimate can be tuned here, e.g.  ults.bloodbath.radius / .seconds / .cooldown  (defaults are in the code).
-  # Ultimates: bloodbath (Icor), indomitable (Ymir), tides (Varuna), hell (Agni), workshop (Hephaestus), skyruler (Boreus),
-  #   guardian (Azaroth), goldengod (Midas), shadows (Rogue), idolgamble (Jackpot), avoidance (Fateweaver),
-  #   supremesingularity (Singularity), areswrath (Spartan), flowtime (Chrono), desolation (Moander),
-  #   tremor (Dolus), worldtree (Yggdrasil), chains (Shackled), defiantrage (Berserker), swordgod (Samurai)
+  domain-duration-multiplier: 3.0   # every domain ultimate (Agni, Hephaestus, Jackpot, Moander, Rogue, Yggdrasil, Azaroth) lasts this many times its base seconds
+  domain:                    # Azaroth's ultimate (Warden's Domain): an Ancient City rises around an inactive portal. Replaces Deep's Call at max energy
+    armor-damage: 0
+    armor-repair: 0
+    cooldown: 120
+    seconds: 60
+    radius: 30                 # size of the domain (doubled)
+    center-offset: 5           # the portal is built this many blocks in front of you
+    portal-inner-width: 3      # reinforced-deepslate portal frame (inner size, the frame adds 2)
+    portal-inner-height: 5
+    building-density: 1.0      # 0 = no buildings, 2 = very crowded
+    ruin-amount: 1.0           # 0 = pristine city, 2 = mostly rubble
+    effects: ["darkness:1:6"]
+    beam-interval-ticks: 40    # warden beams (doubled: half as often)
+    beams-per-interval: 3
+    beam-damage: 6.0           # HP (3 hearts), ignores armor
+    beam-range: 45
+    aim-at-enemies-chance: 0.5
+    blocks-per-tick: 1500      # lower = less lag while the city is built
+    restore: true              # false = the city stays forever
+    vein-chance: 0.35          # sculk decoration on the ground
+    sensor-chance: 0.03
+    calibrated-chance: 0.015
+    shrieker-chance: 0.01      # decorative only - never summons a Warden
+    catalyst-chance: 0.015     # extra catalysts are added near the portal
+    protected-materials: [BEDROCK, REINFORCED_DEEPSLATE, END_PORTAL_FRAME]
+    dome: true                 # obsidian dome sealing the domain (removed with the city)
+    dome-material: OBSIDIAN
+    dome-thickness: 2
+    dome-gap: 1                # blocks between the domain radius and the dome's inside
+    dome-depth: 10             # how far below ground level the dome reaches (solid terrain is left alone)
+  shadows:                   # Rogue: Shadow Manipulation
+    seconds: 30
+    radius: 30
+    clone-health: 100        # HP of every clone
+    clone-damage: 6          # HP per hit before crits
+    hunters: 5               # clones that hunt (they only ever attack players)
+    runners: 5               # clones that run around and only fight back
+    eat-below-fraction: 0.5  # clones eat a golden apple when under this share of their health
+    apples: 3                # golden apples each clone can eat
+    apple-heal: 20           # extra HP healed per apple
+    web-bubble: 1            # 1 = clones place cobwebs around themselves while eating
+    web-seconds: 6
+    stun-ticks: 100          # an axe hit on a blocking player disables the shield this long
+    block-chance: 0.35       # chance a clone with a shield blocks a hit from the front
+    clone-speed: 0.26
+  skyruler:                  # Boreus
+    launch: 2.2              # the launch up (before every shockwave round)
+    launch-ticks: 10         # ticks of climbing before the steady flight starts
+    cruise-speed: 1.6        # constant flight speed, like a flight-duration-1 firework rocket
+    landing-damage: 6.0      # the shockwave: 6 HP = 3 hearts
+    landing-radius: 5
+    max-waves: 3             # shockwaves in a row (each needs to hit somebody to keep going)
+    idle-seconds: 5          # ends after this long without hitting anybody
   idolgamble:
     start-chance: 1            # jackpot chance of the first spin (percent) ...
     chance-step: 1             # ... grows by this much with every spin ...
