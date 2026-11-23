@@ -889,12 +889,12 @@ final class UltImpl {
 
     /** Resting pose: the spear stands upright, tip to the sky. */
     private static Transformation spearLook() {
-        return new Transformation(new Vector3f(), new org.joml.Quaternionf().rotateZ((float) -Math.PI / 4), new Vector3f(2.4f, 2.4f, 2.4f), new AxisAngle4f());
+        return new Transformation(new Vector3f(), new org.joml.Quaternionf().rotateZ((float) -Math.PI / 4), new Vector3f(2.4f, 2.4f, 2.4f), new org.joml.Quaternionf());
     }
 
     /** Flying pose: the tip points along the display's facing, so it flies head first along the shot. */
     private static Transformation spearFlight() {
-        return new Transformation(new Vector3f(), new org.joml.Quaternionf().rotateX((float) Math.PI / 2).rotateZ((float) -Math.PI / 4), new Vector3f(2.4f, 2.4f, 2.4f), new AxisAngle4f());
+        return new Transformation(new Vector3f(), new org.joml.Quaternionf().rotateX((float) Math.PI / 2).rotateZ((float) -Math.PI / 4), new Vector3f(2.4f, 2.4f, 2.4f), new org.joml.Quaternionf());
     }
 
     private static boolean aresWrath(Player p) {
