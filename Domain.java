@@ -36,7 +36,7 @@ final class Domain {
     static boolean start(Player p) {
         Aegis pl = Aegis.I;
         int R = Math.max(12, (int) v("radius", 30));
-        int dur = Abilities.ticks(p, v("seconds", 60) * Aegis.I.getConfig().getDouble("ults.domain-duration-multiplier", 3.0));
+        int dur = Abilities.ticks(p, v("seconds", 60) * Aegis.I.getConfig().getDouble("ults.domain-duration-multiplier", 3.0) * 0.5);
         int perTick = Math.max(200, (int) v("blocks-per-tick", 1500));
         boolean restore = pl.getConfig().getBoolean("ults.domain.restore", true);
         int interval = Math.max(5, (int) v("beam-interval-ticks", 40));

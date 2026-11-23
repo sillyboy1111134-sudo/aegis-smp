@@ -540,7 +540,7 @@ megamace:
 ults:
   enabled: true
   domain-duration-multiplier: 3.0   # every domain ultimate (Agni, Hephaestus, Jackpot, Moander, Rogue, Yggdrasil, Azaroth) lasts this many times its base seconds
-  domain:                    # Azaroth's ultimate (Warden's Domain): an Ancient City rises around an inactive portal. Replaces Deep's Call at max energy
+  domain:                    # Azaroth's ultimate (Warden's Domain): an Ancient City rises around an inactive portal. Replaces the Sonic Beam at max energy
     armor-damage: 0
     armor-repair: 0
     cooldown: 120

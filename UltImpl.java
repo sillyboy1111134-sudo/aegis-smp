@@ -74,7 +74,7 @@ final class UltImpl {
         Ults.register("hell", "A Piece of Hell", "Obsidian dome with nether terrain for 10s: everyone inside burns (unextinguishable), can't use water, you deal 1.5x damage.", 180, 1200, true, false, UltImpl::hell, null);
         Ults.register("workshop", "Workshop", "Obsidian dome workshop for 10s: Resistance III, and everything you craft has 1.5x durability, 2x mining speed and 1.15x damage.", 120, 1200, false, false, UltImpl::workshop, null);
         Ults.register("skyruler", "Sky Ruler", "You are launched into the air and an elytra opens: you fly at constant rocket speed. Landing makes a 3 heart shockwave; if it hits someone you launch again (3 shockwaves max), if not it ends. Ends after 5 seconds without hitting anyone.", 180, 120, false, false, UltImpl::skyRuler, null);
-        Ults.register("domain", "Warden's Domain", "An Ancient City rises around you inside an obsidian dome: enemies are blinded and warden beams rain down on them for 60s.", 120, 1200, true, false, Domain::start, null);
+        Ults.register("domain", "Warden's Domain", "An Ancient City rises around you inside an obsidian dome: enemies are blinded and warden beams rain down on them for 60s.", 120, 1200, false, false, Domain::start, null);
         Ults.register("goldengod", "Golden God", "30s: apples in hand become golden apples, blocks in hand become gold blocks, Strength II and 20 hearts.", 3600, 30, false, false, UltImpl::goldenGod, null);
         Ults.register("shadows", "Shadow Manipulation", "10 clones of you (your armor, weapon, shield and effects, 100 HP) rise from a 30 block shadow pool and fight like real PvPers: 5 hunt players, 5 run and only fight back. They eat golden apples when low and only ever attack players. Everyone in the pool is blinded.", 120, 1200, false, false, UltImpl::shadows, null);
         Ults.register("idolgamble", "Idol Death Gamble", "Obsidian casino dome for 30s. Everyone inside spins the slots every 5s: 3 diamonds (1%) = Resistance III, Regen II, Strength IV.", 120, 1200, false, false, UltImpl::idolGamble, null);
@@ -87,7 +87,7 @@ final class UltImpl {
         Ults.register("worldtree", "Domain of the World Tree", "Replaces World Tree's first ability. Unbreakable wooden dome with a 500 HP tree. Leave by pressing again or killing the tree. Trusted players get 20 hearts + Regen II.", 120, 1200, true, false, UltImpl::worldTree, UltImpl::releaseTree);
         Ults.register("chains", "Chains of Fate", "Replaces Enchain. Chains everything within 30 blocks (5s stun) and gives bleed and the enchain effect for 30s.", 120, 30, true, false, UltImpl::chains, null);
         Ults.register("defiantrage", "Defiant Rage", "Passive: triggers by itself when you would die: you revive, all armor is fully mended, Strength II + Speed III for 30s.", 1800, 0, false, true, p -> false, null);
-        Ults.register("swordgod", "Sword God", "A rain of swords from the sky: 1 heart on a hit, and each blade explodes on the ground for 1 heart in its blast radius.", 60, 8, false, false, UltImpl::swordGod, null);
+        Ults.register("swordgod", "Sword God", "You float in the air under a magic circle while a slow rain of netherite swords falls: 1 heart on a hit, and each blade explodes on the ground for 1 heart in its blast radius.", 60, 8, false, false, UltImpl::swordGod, null);
     }
 
     static {
@@ -887,8 +887,14 @@ final class UltImpl {
 
     private static final Map<UUID, Ares> ares = new HashMap<>();
 
+    /** Resting pose: the spear stands upright, tip to the sky. */
     private static Transformation spearLook() {
-        return new Transformation(new Vector3f(), new AxisAngle4f((float) Math.toRadians(-135), 0f, 0f, 1f), new Vector3f(2.4f, 2.4f, 2.4f), new AxisAngle4f());
+        return new Transformation(new Vector3f(), new org.joml.Quaternionf().rotateZ((float) -Math.PI / 4), new Vector3f(2.4f, 2.4f, 2.4f), new AxisAngle4f());
+    }
+
+    /** Flying pose: the tip points along the display's facing, so it flies head first along the shot. */
+    private static Transformation spearFlight() {
+        return new Transformation(new Vector3f(), new org.joml.Quaternionf().rotateX((float) Math.PI / 2).rotateZ((float) -Math.PI / 4), new Vector3f(2.4f, 2.4f, 2.4f), new AxisAngle4f());
     }
 
     private static boolean aresWrath(Player p) {
@@ -901,6 +907,7 @@ final class UltImpl {
             a.orbit.add(p.getWorld().spawn(p.getLocation(), ItemDisplay.class, dd -> {
                 dd.setItemStack(new ItemStack(spearMat));
                 dd.setTransformation(spearLook());
+                dd.setBillboard(org.bukkit.entity.Display.Billboard.VERTICAL);   // always upright, seen from any side
                 dd.setPersistent(false);
                 dd.setViewRange(3f);
             }));
@@ -950,6 +957,8 @@ final class UltImpl {
         final World w = p.getWorld();
         final Location pos = p.getEyeLocation().add(dir.clone().multiply(1.2));
         pos.setDirection(dir);
+        d.setBillboard(org.bukkit.entity.Display.Billboard.FIXED);
+        d.setTransformation(spearFlight());
         d.teleport(pos);
         w.playSound(p.getLocation(), "item.trident.throw", 1.2f, 0.8f);
         final UUID u = p.getUniqueId();
@@ -1229,21 +1238,53 @@ final class UltImpl {
         final double dmg = c(id, "damage", 2.0);   // 1 heart
         final Location ctr = p.getLocation().clone();
         final World w = ctr.getWorld();
-        final Material[] mats = {Material.IRON_SWORD, Material.DIAMOND_SWORD, Material.NETHERITE_SWORD, Material.GOLDEN_SWORD};
+        final Location hover = ctr.clone().add(0, 3, 0);
+        p.teleport(new Location(w, ctr.getX(), ctr.getY() + 3, ctr.getZ(), ctr.getYaw(), ctr.getPitch()));
+        p.setGravity(false);
+        p.setVelocity(new Vector(0, 0, 0));
+        p.setFallDistance(0);
         final List<ItemDisplay> disp = new ArrayList<>();
         final List<double[]> pos = new ArrayList<>();   // x, y, z, age
         w.playSound(ctr, "item.trident.thunder", 1.5f, 1.4f);
         new BukkitRunnable() {
             int t = 0;
+            private void land() {
+                p.setGravity(true);
+                p.setFallDistance(0);
+            }
             @Override public void run() {
-                if (t < life && t % 2 == 0)
+                if (!p.isOnline() || p.isDead()) { for (ItemDisplay s : disp) s.remove(); disp.clear(); land(); cancel(); return; }
+                if (t <= life + 40) {   // the caster floats in the air under a magic circle
+                    Location pl = p.getLocation();
+                    if (pl.distanceSquared(hover) > 1.5) { Location tp = hover.clone(); tp.setYaw(pl.getYaw()); tp.setPitch(pl.getPitch()); p.teleport(tp); }
+                    p.setVelocity(new Vector(0, 0, 0));
+                    p.setFallDistance(0);
+                    double cy = hover.getY() + 3.2, ang = t * 0.06;
+                    for (int ring = 0; ring < 3; ring++) {
+                        double rad = 1.2 + ring * 1.1;
+                        for (int k = 0; k < 24 + ring * 10; k++) {
+                            double a = ang * (ring % 2 == 0 ? 1 : -1) + k * Math.PI * 2 / (24 + ring * 10);
+                            w.spawnParticle(Particle.END_ROD, hover.getX() + Math.cos(a) * rad, cy, hover.getZ() + Math.sin(a) * rad, 1, 0, 0, 0, 0);
+                        }
+                    }
+                    for (int k = 0; k < 5; k++) {   // a star inside the circle
+                        double a1 = ang + k * Math.PI * 2 / 5, a2 = ang + (k + 2) * Math.PI * 2 / 5;
+                        for (int j = 0; j <= 8; j++) {
+                            double f = j / 8.0;
+                            w.spawnParticle(Particle.ENCHANT, hover.getX() + Math.cos(a1) * 2.2 * (1 - f) + Math.cos(a2) * 2.2 * f, cy + 0.05,
+                                    hover.getZ() + Math.sin(a1) * 2.2 * (1 - f) + Math.sin(a2) * 2.2 * f, 1, 0, 0, 0, 0);
+                        }
+                    }
+                }
+                if (t < life && t % 4 == 0)
                     for (int i = 0; i < 3; i++) {
                         Location at = randomSurface(ctr, r);
                         double y = at.getY() + 28;
                         ItemDisplay id2 = w.spawn(new Location(w, at.getX(), y, at.getZ()), ItemDisplay.class, dd -> {
-                            dd.setItemStack(new ItemStack(mats[RND.nextInt(mats.length)]));
+                            dd.setItemStack(new ItemStack(Material.NETHERITE_SWORD));
                             dd.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f((float) Math.toRadians(-135), 0f, 0f, 1f), new Vector3f(2f, 2f, 2f), new AxisAngle4f()));
                             dd.setPersistent(false);
+                            dd.setBillboard(org.bukkit.entity.Display.Billboard.VERTICAL);   // always faces you, tip straight down
                             dd.setViewRange(3f);
                         });
                         disp.add(id2);
@@ -1252,10 +1293,10 @@ final class UltImpl {
                 for (int i = disp.size() - 1; i >= 0; i--) {
                     ItemDisplay s = disp.get(i);
                     double[] ps = pos.get(i);
-                    ps[1] -= 1.5;
+                    ps[1] -= 0.7;
                     ps[3]++;
                     Location now = new Location(w, ps[0], ps[1], ps[2]);
-                    boolean boom = ps[3] > 90 || !now.clone().subtract(0, 0.8, 0).getBlock().isPassable();
+                    boolean boom = ps[3] > 200 || !now.clone().subtract(0, 0.8, 0).getBlock().isPassable();
                     boolean struck = false;
                     for (Entity e : w.getNearbyEntities(now, 1.3, 1.6, 1.3))
                         if (Abilities.validTarget(p, e)) { Abilities.hurt((LivingEntity) e, dmg, p); struck = true; }   // a direct hit
@@ -1273,7 +1314,7 @@ final class UltImpl {
                     }
                 }
                 t++;
-                if (t > life && disp.isEmpty()) cancel();
+                if (t > life && disp.isEmpty()) { land(); cancel(); }
             }
         }.runTaskTimer(Aegis.I, 0, 1);
         return true;
